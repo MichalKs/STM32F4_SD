@@ -125,7 +125,7 @@ DRESULT disk_read (
 
 		// translate the reslut code here
 
-		return res;
+		return RES_OK;
 
 //	case USB :
 		// translate the arguments here
@@ -173,7 +173,7 @@ DRESULT disk_write (
 
 		// translate the reslut code here
 
-		return res;
+		return RES_OK;
 
 //	case USB :
 		// translate the arguments here
@@ -220,7 +220,7 @@ DRESULT disk_ioctl (
 
 		// post-process here
 
-		return res;
+		return RES_OK;
 
 //	case USB :
 		// pre-process here
