@@ -1,6 +1,6 @@
 /**
  * @file: 	spi.h
- * @brief:	   
+ * @brief:	SPI control functions
  * @date: 	22 kwi 2014
  * @author: Michal Ksiezopolski
  * 
@@ -27,5 +27,6 @@ void SPI1_Select(void);
 void SPI1_Deselect(void);
 void SPI1_ReadBuffer(uint8_t* buf, uint32_t len);
 void SPI1_SendBuffer(uint8_t* buf, uint32_t len);
+void SPI1_TransmitBuffer(uint8_t* rx_buf, uint8_t* tx_buf, uint32_t len);
 
 #endif /* SPI_H_ */

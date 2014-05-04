@@ -1,6 +1,6 @@
 /**
  * @file: 	led.h
- * @brief:	   
+ * @brief:	Light Emitting Diode control functions.
  * @date: 	9 kwi 2014
  * @author: Michal Ksiezopolski
  * 

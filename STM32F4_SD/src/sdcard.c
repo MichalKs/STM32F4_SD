@@ -1,6 +1,6 @@
 /**
  * @file: 	sdcard.c
- * @brief:	   
+ * @brief:	SD card control functions.
  * @date: 	22 kwi 2014
  * @author: Michal Ksiezopolski
  * 
@@ -37,7 +37,7 @@
 #define SD_WRITE_MULTIPLE 		25	///< Continuously writes blocks of data until a stop transmission token is sent
 
 
-static uint8_t SD_SendCommand(uint8_t cmd, uint8_t* args, uint8_t crc);
+static uint8_t SD_SendCommand(uint8_t cmd, uint8_t* args);
 
 /**
  * @brief Initialize the SD card.
@@ -48,21 +48,23 @@ void SD_Init(void) {
 
 	int i;
 
+	// Synchronize card with SPI
 	for (i = 0; i < 10; i++) {
 		SPI1_Transmit(0xff);
 	}
 
 	SPI1_Select();
+
 	uint8_t status;
 	uint8_t args[4] = {0, 0, 0, 0};
 
-	SD_SendCommand(0x40, args, 0x95);
+	SD_SendCommand(SD_GO_IDLE_STATE, args);
 
 	while (SPI1_Transmit(0xff) != 1);
 
 	do {
 
-		SD_SendCommand(0x41, args, 0x87);
+		SD_SendCommand(SD_SEND_OP_COND, args);
 		for (i=0; i < 8; i++) {
 			status = SPI1_Transmit(0xff);
 			if (status == 0)
@@ -122,22 +124,25 @@ void SD_Init(void) {
 	SPI1_Deselect();
 }
 
-static uint8_t SD_SendCommand(uint8_t cmd, uint8_t* args, uint8_t crc) {
+static uint8_t SD_SendCommand(uint8_t cmd, uint8_t* args) {
 
-//	SPI1_Select();
-//	SPI1_Transmit(0xff);
-
-	SPI1_Transmit(cmd);
+	SPI1_Transmit(0x40 | cmd);
 	SPI1_Transmit(args[0]);
 	SPI1_Transmit(args[1]);
 	SPI1_Transmit(args[2]);
 	SPI1_Transmit(args[3]);
-	SPI1_Transmit(crc);
-//	SPI1_Transmit(0xff);
+
+	// CRC is irrelevant while using SPI interface - only checked for some commands.
+	switch (cmd) {
+	case SD_GO_IDLE_STATE:
+		SPI1_Transmit(0x95);
+		break;
+
+	default:
+		SPI1_Transmit(0xff);
+	}
 
 	uint8_t ret = SPI1_Transmit(0xff);
-//	SPI1_Transmit(0xff);
-//	SPI1_Deselect();
 
 	return ret;
 }
@@ -157,13 +162,12 @@ uint8_t SD_ReadSectors(uint8_t* buf, uint32_t sector, uint32_t count) {
 	SPI1_Select();
 
 	uint8_t status;
-
 //	do {
 //		status = SD_SendCommand(0x40 | SD_READ_MULTIPLE_BLOCK, args, 0xff);
 //		TIMER_Delay(5);
 //	} while (status != 0);
 
-	status = SD_SendCommand(0x40 | SD_READ_MULTIPLE_BLOCK, args, 0xff);
+	status = SD_SendCommand(SD_READ_MULTIPLE_BLOCK, args);
 
 	while (SPI1_Transmit(0xff) != 0);
 
@@ -185,7 +189,7 @@ uint8_t SD_ReadSectors(uint8_t* buf, uint32_t sector, uint32_t count) {
 //		TIMER_Delay(5);
 //	} while (status != 0);
 
-	status = SD_SendCommand(0x40 | SD_STOP_TRANSMISSION, args, 0xff);
+	status = SD_SendCommand(SD_STOP_TRANSMISSION, args);
 
 	while (SPI1_Transmit(0xff) != 0);
 
@@ -212,7 +216,7 @@ uint8_t SD_WriteSectors(uint8_t* buf, uint32_t sector, uint32_t count) {
 	uint8_t status;
 
 	do {
-		status = SD_SendCommand(0x40 | SD_WRITE_MULTIPLE, args, 0xff);
+		status = SD_SendCommand(SD_WRITE_MULTIPLE, args);
 		TIMER_Delay(5);
 	} while (status != 0);
 

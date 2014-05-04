@@ -1,6 +1,6 @@
 /**
  * @file: 	sdcard.h
- * @brief:	   
+ * @brief:	SD card control functions.
  * @date: 	22 kwi 2014
  * @author: Michal Ksiezopolski
  * 
