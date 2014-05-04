@@ -34,7 +34,7 @@
 #define SD_READ_SINGLE_BLOCK	17	///< Reads a block of size set by SET_BLOCKLEN
 #define SD_READ_MULTIPLE_BLOCK 	18	///< Continuously transfers data blocks from card to host until interrupted by STOP_TRANSMISSION
 #define SD_WRITE_BLOCK			24	///< Writes a block of size set by SET_BLOCKLEN
-#define SD_WRITE_MULTIPLE 		25	///< Continuously writes blocks of data until a stop transmission token is sent
+#define SD_WRITE_MULTIPLE_BLOCK 25	///< Continuously writes blocks of data until a stop transmission token is sent
 
 
 static uint8_t SD_SendCommand(uint8_t cmd, uint8_t* args);
@@ -216,7 +216,7 @@ uint8_t SD_WriteSectors(uint8_t* buf, uint32_t sector, uint32_t count) {
 	uint8_t status;
 
 	do {
-		status = SD_SendCommand(SD_WRITE_MULTIPLE, args);
+		status = SD_SendCommand(SD_WRITE_MULTIPLE_BLOCK, args);
 		TIMER_Delay(5);
 	} while (status != 0);
 
