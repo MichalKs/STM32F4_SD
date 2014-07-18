@@ -10,7 +10,7 @@
 #include "diskio.h"		/* FatFs lower layer API */
 //#include "usbdisk.h"	/* Example: USB drive control */
 //#include "atadrive.h"	/* Example: ATA drive control */
-#include "../src/sdcard.h"
+#include <sdcard.h>
 
 /* Definitions of physical drive number for each media */
 #define ATA		0

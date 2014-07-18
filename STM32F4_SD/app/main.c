@@ -88,7 +88,7 @@ int main(void)
 
 	f_gets((char*)buf, 256, &file);
 
-	printf("The file contains the following text:\n\"%s\"\r\n", buf);
+	printf("The file contains the following text:\r\n\"%s\"\r\n", buf);
 
 	f_close(&file); // Close file
 	f_mount(NULL, "", 1); // Unmount SD Card

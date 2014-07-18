@@ -1,7 +1,7 @@
 /**
- * @file: 	uart.h
- * @brief:	   
- * @date: 	12 kwi 2014
+ * @file:   uart.h
+ * @brief:  Controlling UART
+ * @date:   12 kwi 2014
  * @author: Michal Ksiezopolski
  * 
  * @verbatim
@@ -20,8 +20,23 @@
 
 #include <stm32f4xx.h>
 
-void UART2_Init(void);
-void USART2_Putc(uint8_t c);
+/**
+ * @defgroup  USART2 USART2
+ * @brief     USART2 low level functions
+ */
+
+/**
+ * @addtogroup USART2
+ * @{
+ */
+
+void    UART2_Init(void);
+void    USART2_Putc(uint8_t c);
 uint8_t USART2_Getc(void);
+
+
+/**
+ * @}
+ */
 
 #endif /* UART_H_ */
