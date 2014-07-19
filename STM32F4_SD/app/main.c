@@ -54,14 +54,14 @@ int main(void)
 
 	SD_Init();
 
-//	uint8_t buf[1024];
+	uint8_t buf[1024];
 
-//	SD_ReadSectors(buf,0,2);
-//
-//	TIMER_Delay(1000);
-//	hexdump(buf, 1024);
-//
-//	printf("/nPo hexdumpie\n");
+	SD_ReadSectors(buf, 0, 1);
+
+	TIMER_Delay(1000);
+	hexdump(buf, 1024);
+
+	printf("After hexdump\r\n");
 
 
 //	FATFS FatFs;

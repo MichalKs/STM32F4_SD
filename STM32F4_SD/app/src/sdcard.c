@@ -61,8 +61,16 @@
 #define SD_IF_COND_VOLT   (1<<8)  ///< Signifies voltage range 2.7-3.6V
 #define SD_ACMD41_HCS     (1<<30) ///< Host can handle SDSC and SDHC cards
 
+/*
+ * Tokens
+ */
+#define SD_TOKEN_SBR_MBR_SBW 0xfe
+
+
 static uint8_t SD_SendCommand(uint8_t cmd, uint32_t args);
 static uint8_t SD_GetResponseR3orR7(uint8_t* buf);
+
+static isSDHC; ///< Is the card SDHC?
 
 /**
  * @brief SD Card R1 response structure
@@ -139,6 +147,9 @@ typedef union {
 
 /**
  * @brief Initialize the SD card.
+ *
+ * @details This function initializes both SDSC and SDHC cards.
+ *
  */
 void SD_Init(void) {
 
@@ -150,7 +161,7 @@ void SD_Init(void) {
   SPI1_Select();
 
   // Synchronize card with SPI
-  for (i = 0; i < 100; i++) {
+  for (i = 0; i < 20; i++) {
     SPI1_Transmit(0xff);
   }
 
@@ -206,6 +217,8 @@ void SD_Init(void) {
 
     resp.responseR1 = SD_SendCommand(SD_APP_CMD, 0);
     resp.responseR1 = SD_SendCommand(SD_ACMD_SEND_OP_COND, SD_ACMD41_HCS);
+    // Without this delay card wouldn't initialize the first time after
+    // power was connected.
     TIMER_Delay(20);
     if (resp.responseR1 == 0x00) { // Card left IDLE state and no errors
       break;
@@ -222,7 +235,7 @@ void SD_Init(void) {
   SD_GetResponseR3orR7(buf);
 
   // Check response errors
-  if (resp.responseR1 != 0x01) {
+  if (resp.responseR1 != 0x00) {
     printf("SD_READ_OCR error\r\n");
   }
 
@@ -232,110 +245,44 @@ void SD_Init(void) {
   }
   printf("\r\n");
 
+  // check capacity
+  if (buf[0] & 0x40) {
+    printf("SDHC card connected\r\n");
+    isSDHC = 1;
+  } else {
+    printf("SDSC card connected\r\n");
+    isSDHC = 0;
+  }
+
   SPI1_Deselect();
 
-//  for (i=0; i<10; i++) {
-//    printf("%02x ", SPI1_Transmit(0xff));
-//  }
-//  printf("\r\n");
-
-//  while (SPI1_Transmit(0xff) != 1);
-
-//  while (1) {
-//    resp.responseR1 = SPI1_Transmit(0xff);
-//    if (resp.flags.inIdleState) {
-//      break;
-//    }
-//  }
-
-//
-//  do {
-//
-//    SD_SendCommand(SD_SEND_OP_COND, 0);
-//
-//    for (i=0; i < 8; i++) {
-//      resp.responseR1 = SPI1_Transmit(0xff);
-//      if (resp.responseR1 == 0) {
-//        break;
-//      }
-//    }
-//
-//  } while (resp.responseR1 != 0);
-
-//  resp.flags.eraseReset == 1
-
-//  args[2] = 0x01;
-//  args[3] = 0xaa;
-//
-//  i = 0;
-//  do {
-//    status = SD_SendCommand(0x48, args, 0x87);
-//    TIMER_Delay(5);
-//    i++;
-//  } while (status != 1);
-//
-//  printf("CMD8, status = %02x (%d iterations)\r\n", status, i);
-
-//  args[2] = 0;
-//  args[3] = 0;
-//
-//  i = 0;
-//  do {
-//    args[0] = 0;
-//    status = SD_SendCommand(0x77, args, 0xff);
-//    args[0] = 0x40;
-//    TIMER_Delay(5);
-//    status = SD_SendCommand(0x69, args, 0xff);
-//    i++;
-//    TIMER_Delay(50);
-//  } while (status != 0);
-//
-//  printf("ACMD41, status = %02x (%d iterations)\r\n", status, i);
-
-//  args[0] = 0;
-//  i = 0;
-//  do {
-//    status = SD_SendCommand(0x40+58, args, 0xff);
-//    i++;
-//    TIMER_Delay(50);
-//  } while (status != 0);
-//
-//  printf("OCR, status = %02x (%d iterations)\r\n", status, i);
-
-  // 4 bytes of OCR
-//  SPI1_Transmit(0xff);
-//  SPI1_Transmit(0xff);
-//  status = SPI1_Transmit(0xff);
-//  SPI1_Transmit(0xff);
-//  SPI1_Transmit(0xff);
-//  SPI1_Transmit(0xff); // One additional for safety
-//
-//  printf("OCR, 3rd byte  = %02x\r\n", status);
-
-//  SPI1_Deselect();
 }
-
-
-
-
+/**
+ *
+ * @param buf
+ * @param sector
+ * @param count
+ * @return
+ */
 uint8_t SD_ReadSectors(uint8_t* buf, uint32_t sector, uint32_t count) {
 
-  sector *= 512;
+  SD_ResponseR1 resp;
+
+  // SDSC cards use byte addressing, SDHC use block addressing
+  if (!isSDHC) {
+    sector *= 512;
+  }
 
   SPI1_Select();
 
-  uint8_t status;
-//  do {
-//    status = SD_SendCommand(0x40 | SD_READ_MULTIPLE_BLOCK, args, 0xff);
-//    TIMER_Delay(5);
-//  } while (status != 0);
+  resp.responseR1 = SD_SendCommand(SD_READ_MULTIPLE_BLOCK, sector);
 
-  status = SD_SendCommand(SD_READ_MULTIPLE_BLOCK, sector);
-
-  while (SPI1_Transmit(0xff) != 0);
+  if (resp.responseR1 != 0x00) {
+    printf("SD_READ_MULTIPLE_BLOCK error\r\n");
+  }
 
   while (count) {
-    while (SPI1_Transmit(0xff) != 0xfe); // wait for data token
+    while (SPI1_Transmit(0xff) != SD_TOKEN_SBR_MBR_SBW); // wait for data token
     SPI1_ReadBuffer(buf, 512);
     SPI1_Transmit(0xff);
     SPI1_Transmit(0xff); // two bytes CRC
@@ -343,16 +290,9 @@ uint8_t SD_ReadSectors(uint8_t* buf, uint32_t sector, uint32_t count) {
     buf += 512; // move buffer pointer forward
   }
 
+  resp.responseR1 = SD_SendCommand(SD_STOP_TRANSMISSION, 0);
 
-//  do {
-//    status = SD_SendCommand(0x40 | SD_STOP_TRANSMISSION, args, 0xff);
-//    TIMER_Delay(5);
-//  } while (status != 0);
-
-  status = SD_SendCommand(SD_STOP_TRANSMISSION, 0);
-
-  while (SPI1_Transmit(0xff) != 0);
-
+  // R1b response - check busy flag
   while(!SPI1_Transmit(0xff));
 
   SPI1_Deselect();
@@ -427,7 +367,7 @@ static uint8_t SD_SendCommand(uint8_t cmd, uint32_t args) {
   // So, we send a dummy byte first.
   SPI1_Transmit(0xff);
   uint8_t ret = SPI1_Transmit(0xff);
-//  printf("Response to cmd %d is %02x\r\n", cmd, ret);
+  printf("Response to cmd %d is %02x\r\n", cmd, ret);
 
   return ret;
 }
