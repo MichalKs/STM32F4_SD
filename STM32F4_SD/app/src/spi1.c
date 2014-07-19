@@ -15,7 +15,7 @@
  * @endverbatim
  */
 
-#include "spi.h"
+#include "spi1.h"
 
 /**
  * @brief Initialize SPI1 and SS pin.

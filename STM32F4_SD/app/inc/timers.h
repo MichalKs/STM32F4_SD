@@ -1,7 +1,7 @@
 /**
- * @file: 	timers.h
- * @brief:	Timing control functions.
- * @date: 	9 kwi 2014
+ * @file:   timers.h
+ * @brief:  Timing control functions.
+ * @date:   9 kwi 2014
  * @author: Michal Ksiezopolski
  * 
  * Control of the SysTick and software timers
@@ -22,12 +22,12 @@
 #define TIMERS_H_
 
 /**
- * @defgroup  FIFO FIFO
- * @brief     First in first out buffer functions
+ * @defgroup  TIMER TIMER
+ * @brief     Timing control functions
  */
 
 /**
- * @addtogroup Timers
+ * @addtogroup TIMER
  * @{
  */
 

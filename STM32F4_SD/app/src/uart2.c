@@ -15,7 +15,7 @@
  * @endverbatim
  */
 
-#include <uart.h>
+#include <uart2.h>
 #include <fifo.h>
 
 /**
@@ -26,7 +26,7 @@
 #define UART2_BUF_LEN 512 ///< UART buffer lengths
 #define UART2_TERMINATOR '\n' ///< UART frame terminator character
 
-static uint8_t gotFrame;  ///< Signals a new frame
+static uint8_t gotFrame;  ///< Nonzero signals a new frame (number of received frames)
 
 static uint8_t rxBuffer[UART2_BUF_LEN]; ///< Buffer for received data.
 static uint8_t txBuffer[UART2_BUF_LEN]; ///< Buffer for transmitted data.
@@ -129,21 +129,44 @@ uint8_t USART2_Getc(void) {
 }
 /**
  * @brief Get a complete frame from USART2 (nonblocking)
- * @return Received char.
- * TODO Make it work
+ * @param buf Buffer for data (data will be null terminated for easier string manipulation)
+ * @param len Length not including terminator character
+ * @retval 0 Received frame
+ * @retval 1 No frame in buffer
+ * @retval 2
  */
-uint8_t USART2_GetFrame(uint8_t* buf, uint8_t len) {
+uint8_t USART2_GetFrame(uint8_t* buf, uint8_t* len) {
+
+  uint8_t c;
+  *len = 0; // zero out length variable
 
   if (gotFrame) {
 
+    while (1) {
+
+      // no more data and terminator wasn't reached => error
+      if (FIFO_IsEmpty(&rxFifo)) {
+        *len = 0;
+        return 2;
+      }
+
+      buf[(*len)++] =  FIFO_Pop(&rxFifo, &c);
+
+      // if end of frame
+      if (c == UART2_TERMINATOR) {
+        (*len)--; // length without terminator character
+        buf[*len] = 0; // USART terminator character converted to NULL terminator
+        break;
+      }
+
+    }
+    gotFrame--;
     return 0;
 
   } else {
 
     return 1;
   }
-
-
 
 }
 /**
@@ -174,8 +197,9 @@ void USART2_IRQHandler(void) {
 
       uint8_t res = FIFO_Push(&rxFifo, c); // Put data in RX buffer
 
+      // Checking res to ensure no buffer overflow occurred
       if ((c == UART2_TERMINATOR) && (res == 0)) {
-        gotFrame = 1;
+        gotFrame++;
       }
 
     }

@@ -33,7 +33,7 @@
 void    UART2_Init(void);
 void    USART2_Putc(uint8_t c);
 uint8_t USART2_Getc(void);
-
+uint8_t USART2_GetFrame(uint8_t* buf, uint8_t* len);
 
 /**
  * @}

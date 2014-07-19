@@ -16,7 +16,7 @@
  */
 
 #include "sdcard.h"
-#include "spi.h"
+#include "spi1.h"
 #include "timers.h"
 #include <stdio.h>
 
