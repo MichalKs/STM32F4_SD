@@ -54,7 +54,15 @@
 #define SD_ACMD_SEND_OP_COND        41  ///< Activates the card initialization process, sends host capacity.
 #define SD_ACMD_SEND_SCR            51  ///< Reads SD Configuration register
 
+/*
+ * Other SD defines
+ */
+#define SD_IF_COND_CHECK  0xaa    ///< Check pattern for SEND_IF_COND command
+#define SD_IF_COND_VOLT   (1<<8)  ///< Signifies voltage range 2.7-3.6V
+#define SD_ACMD41_HCS     (1<<30) ///< Host can handle SDSC and SDHC cards
+
 static uint8_t SD_SendCommand(uint8_t cmd, uint32_t args);
+static uint8_t SD_GetResponseR3orR7(uint8_t* buf);
 
 /**
  * @brief SD Card R1 response structure
@@ -121,7 +129,7 @@ typedef union {
     uint32_t volt35to36 :1;
     uint32_t switchingTo18      :1;
     uint32_t reserved2          :5;
-    uint32_t cardCapacityStatus :1;
+    uint32_t cardCapacityStatus :1; ///< 0 - SDSC, 1 - SDHC, valid only after power up bit is 1
     uint32_t cardPowerUpStatus  :1; ///< Set to 0 if card has not finished power up routine
   } bits;
 
@@ -134,41 +142,125 @@ typedef union {
  */
 void SD_Init(void) {
 
-  SPI1_Init(); // Initialize SPI interface.
-
   int i;
+  uint8_t buf[10];
 
-  // Synchronize card with SPI
-  for (i = 0; i < 10; i++) {
-    SPI1_Transmit(0xff);
-  }
+  SPI1_Init(); // Initialize SPI interface.
 
   SPI1_Select();
 
+  // Synchronize card with SPI
+  for (i = 0; i < 100; i++) {
+    SPI1_Transmit(0xff);
+  }
+
   SD_ResponseR1 resp;
 
+  // CMD0
   resp.responseR1 = SD_SendCommand(SD_GO_IDLE_STATE, 0);
 
-//  while (SPI1_Transmit(0xff) != 1);
+  // Check response errors
+  if (resp.responseR1 != 0x01) {
+    printf("SD_GO_IDLE_STATE error\r\n");
+  }
 
-  while (1) {
-    resp.responseR1 = SPI1_Transmit(0xff);
-    if (resp.flags.inIdleState) {
+  // CMD8
+  resp.responseR1 = SD_SendCommand(SD_SEND_IF_COND,
+      SD_IF_COND_VOLT | SD_IF_COND_CHECK); // voltage range and check pattern
+
+  SD_GetResponseR3orR7(buf);
+
+  // Check response errors
+  if (resp.responseR1 != 0x01) {
+    printf("SD_SEND_IF_COND error\r\n");
+  }
+
+  // Check if card supports given voltage range
+  if ((buf[3] != SD_IF_COND_CHECK) || (buf[2] != (SD_IF_COND_VOLT>>8))) {
+    printf("SD_SEND_IF_COND error\r\n");
+    for (i=0; i<4; i++) {
+      printf("%02x ", buf[i]);
+    }
+    printf("\r\n");
+
+  }
+
+  // CMD58
+  resp.responseR1 = SD_SendCommand(SD_READ_OCR, 0);
+
+  SD_GetResponseR3orR7(buf);
+
+  // Check response errors
+  if (resp.responseR1 != 0x01) {
+    printf("SD_READ_OCR error\r\n");
+  }
+
+  // Send OCR to terminal
+  for (i=0; i<4; i++) {
+    printf("%02x ", buf[i]);
+  }
+  printf("\r\n");
+
+  // Send ACMD41 until card goes out of IDLE state
+  for (i=0; i<10; i++) {
+
+    resp.responseR1 = SD_SendCommand(SD_APP_CMD, 0);
+    resp.responseR1 = SD_SendCommand(SD_ACMD_SEND_OP_COND, SD_ACMD41_HCS);
+    TIMER_Delay(20);
+    if (resp.responseR1 == 0x00) { // Card left IDLE state and no errors
       break;
+    }
+
+    if (i == 9) {
+      printf("Failed to initialize SD card\r\n");
+      while(1);
     }
   }
 
+  // Read Card Capacity Status - SDSC or SDHC?
+  resp.responseR1 = SD_SendCommand(SD_READ_OCR, 0);
+  SD_GetResponseR3orR7(buf);
 
-  do {
+  // Check response errors
+  if (resp.responseR1 != 0x01) {
+    printf("SD_READ_OCR error\r\n");
+  }
 
-    SD_SendCommand(SD_SEND_OP_COND, 0);
-    for (i=0; i < 8; i++) {
-      resp.responseR1 = SPI1_Transmit(0xff);
-      if (resp.responseR1 == 0) {
-        break;
-      }
-    }
-  } while (resp.responseR1 != 0);
+  // Send OCR to terminal
+  for (i=0; i<4; i++) {
+    printf("%02x ", buf[i]);
+  }
+  printf("\r\n");
+
+  SPI1_Deselect();
+
+//  for (i=0; i<10; i++) {
+//    printf("%02x ", SPI1_Transmit(0xff));
+//  }
+//  printf("\r\n");
+
+//  while (SPI1_Transmit(0xff) != 1);
+
+//  while (1) {
+//    resp.responseR1 = SPI1_Transmit(0xff);
+//    if (resp.flags.inIdleState) {
+//      break;
+//    }
+//  }
+
+//
+//  do {
+//
+//    SD_SendCommand(SD_SEND_OP_COND, 0);
+//
+//    for (i=0; i < 8; i++) {
+//      resp.responseR1 = SPI1_Transmit(0xff);
+//      if (resp.responseR1 == 0) {
+//        break;
+//      }
+//    }
+//
+//  } while (resp.responseR1 != 0);
 
 //  resp.flags.eraseReset == 1
 
@@ -220,7 +312,7 @@ void SD_Init(void) {
 //
 //  printf("OCR, 3rd byte  = %02x\r\n", status);
 
-  SPI1_Deselect();
+//  SPI1_Deselect();
 }
 
 
@@ -302,10 +394,14 @@ uint8_t SD_WriteSectors(uint8_t* buf, uint32_t sector, uint32_t count) {
   return 0;
 }
 /**
+ * @brief Sends a command to the SD card.
  *
- * @param cmd
- * @param args
- * @return
+ * @details This function works for commands which return 1 byte
+ * response - R1 response token. These commands are in the majority.
+ *
+ * @param cmd Command to send
+ * @param args Command arguments: 4 bytes as a 32-bit number
+ * @return Returns R1 response token
  */
 static uint8_t SD_SendCommand(uint8_t cmd, uint32_t args) {
 
@@ -320,13 +416,30 @@ static uint8_t SD_SendCommand(uint8_t cmd, uint32_t args) {
   case SD_GO_IDLE_STATE:
     SPI1_Transmit(0x95);
     break;
+  case SD_SEND_IF_COND:
+    SPI1_Transmit(0x87);
+    break;
   default:
     SPI1_Transmit(0xff);
   }
-
+  // Practice has shown that a valid response token
+  // is sent as the second byte by the card.
+  // So, we send a dummy byte first.
+  SPI1_Transmit(0xff);
   uint8_t ret = SPI1_Transmit(0xff);
+//  printf("Response to cmd %d is %02x\r\n", cmd, ret);
 
   return ret;
+}
+static uint8_t SD_GetResponseR3orR7(uint8_t* buf) {
+
+  uint8_t i = 0;
+  buf[i++] = SPI1_Transmit(0xff);
+  buf[i++] = SPI1_Transmit(0xff);
+  buf[i++] = SPI1_Transmit(0xff);
+  buf[i++] = SPI1_Transmit(0xff);
+
+  return 0;
 }
 /**
  * @}
