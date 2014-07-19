@@ -1,7 +1,7 @@
 /**
- * @file: 	sdcard.h
- * @brief:	SD card control functions.
- * @date: 	22 kwi 2014
+ * @file:   sdcard.h
+ * @brief:  SD card control functions.
+ * @date:   22 kwi 2014
  * @author: Michal Ksiezopolski
  * 
  * @verbatim
@@ -20,9 +20,23 @@
 
 #include <stm32f4xx.h>
 
-void SD_Init(void);
-uint8_t SD_ReadBlock(uint32_t block, uint8_t* buf);
-uint8_t SD_ReadSectors(uint8_t* buf, uint32_t sector, uint32_t count);
-uint8_t SD_WriteSectors(uint8_t* buf, uint32_t sector, uint32_t count);
+/**
+ * @defgroup  SD_CARD SD CARD
+ * @brief     SD Card library functions
+ */
+
+/**
+ * @addtogroup SD_CARD
+ * @{
+ */
+
+void    SD_Init         (void);
+uint8_t SD_ReadBlock    (uint32_t block, uint8_t* buf);
+uint8_t SD_ReadSectors  (uint8_t* buf, uint32_t sector, uint32_t count);
+uint8_t SD_WriteSectors (uint8_t* buf, uint32_t sector, uint32_t count);
+
+/**
+ * @}
+ */
 
 #endif /* SDCARD_H_ */

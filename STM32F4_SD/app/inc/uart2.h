@@ -1,5 +1,5 @@
 /**
- * @file:   uart.h
+ * @file:   uart2.h
  * @brief:  Controlling UART
  * @date:   12 kwi 2014
  * @author: Michal Ksiezopolski
