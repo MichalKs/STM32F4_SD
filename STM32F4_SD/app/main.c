@@ -26,12 +26,12 @@
 #include "led.h"
 #include "uart2.h"
 #include "sdcard.h"
-
+#include <fat.h>
+#include <utils.h>
 
 #define SYSTICK_FREQ 1000 ///< Frequency of the SysTick.
 
 void softTimerCallback(void);
-void hexdump(uint8_t* buf, uint32_t length);
 
 int main(void)
 {
@@ -43,10 +43,10 @@ int main(void)
 	TIMER_StartSoftTimer(timerID);
 
 	LED_TypeDef led;
-	led.nr=LED0;
-	led.gpio=GPIOD;
-	led.pin=12;
-	led.clk=RCC_AHB1Periph_GPIOD;
+	led.nr    = LED0;
+	led.gpio  = GPIOD;
+	led.pin   = 12;
+	led.clk   = RCC_AHB1Periph_GPIOD;
 
 	LED_Add(&led); // Add an LED
 
@@ -54,15 +54,16 @@ int main(void)
 
 	SD_Init();
 
-	uint8_t buf[1024];
+//	uint8_t buf[1024];
 
-	SD_ReadSectors(buf, 0, 1);
+//	SD_ReadSectors(buf, 0, 1);
+//
+//	TIMER_Delay(1000);
+//	hexdump(buf, 512);
+//
+//	printf("After hexdump\r\n");
 
-	TIMER_Delay(1000);
-	hexdump(buf, 1024);
-
-	printf("After hexdump\r\n");
-
+	FAT_Init(SD_Init, SD_ReadSectors, SD_WriteSectors);
 
 //	FATFS FatFs;
 //	FIL file;
@@ -98,25 +99,7 @@ int main(void)
 	}
 }
 
-void hexdump(uint8_t* buf, uint32_t length) {
 
-	uint32_t i = 0;
-
-	while (length--) {
-
-		printf("%02x ", buf[i]);
-
-		i++;
-		if ((i % 16) == 0) {
-			printf("\r\n");
-		}
-		if ((i % 50) == 0) {
-			TIMER_Delay(1000);
-		}
-
-	}
-
-}
 
 void softTimerCallback(void) {
 
