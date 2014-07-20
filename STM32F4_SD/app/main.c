@@ -52,10 +52,10 @@ int main(void)
 
 	printf("Starting program\r\n"); // Print a string to UART2
 
-	SD_Init();
-
+//	SD_Init();
+//
 //	uint8_t buf[1024];
-
+//
 //	SD_ReadSectors(buf, 0, 1);
 //
 //	TIMER_Delay(1000);

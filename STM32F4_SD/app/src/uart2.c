@@ -23,7 +23,7 @@
  * @{
  */
 
-#define UART2_BUF_LEN 512 ///< UART buffer lengths
+#define UART2_BUF_LEN 1024 ///< UART buffer lengths
 #define UART2_TERMINATOR '\n' ///< UART frame terminator character
 
 static uint8_t gotFrame;  ///< Nonzero signals a new frame (number of received frames)
