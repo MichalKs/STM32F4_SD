@@ -19,7 +19,7 @@
  */
 
 
-#include "uart2.h"
+#include <uart2.h>
 
 /*
  * These stubs should be expanded!!!

@@ -20,6 +20,20 @@
 
 #include <inttypes.h>
 
+/**
+ * @defgroup  UTILS UTILS
+ * @brief     Common utility functions and macros
+ */
+
+/**
+ * @addtogroup UTILS
+ * @{
+ */
+
 void hexdump(uint8_t* buf, uint32_t length);
+
+/**
+ * @}
+ */
 
 #endif /* UTILS_H_ */

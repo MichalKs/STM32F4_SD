@@ -21,6 +21,11 @@
 #include <timers.h>
 
 /**
+ * @addtogroup UTILS
+ * @{
+ */
+
+/**
  * @brief Send data in hex format to terminal.
  * @param buf Data buffer.
  * @param length Number of bytes to send.
@@ -34,13 +39,18 @@ void hexdump(uint8_t* buf, uint32_t length) {
     printf("%02x ", buf[i]);
 
     i++;
+    // new line every 16 chars
     if ((i % 16) == 0) {
       printf("\r\n");
     }
+    // delay every 50 chars
     if ((i % 50) == 0) {
       TIMER_Delay(500); // Delay so as not to overflow buffer
     }
-
   }
-
 }
+
+/**
+ * @}
+ */
+
