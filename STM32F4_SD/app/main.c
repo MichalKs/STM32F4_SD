@@ -24,8 +24,6 @@
 #include <led.h>
 #include <comm.h>
 #include <keys.h>
-#include <sdcard.h>
-#include <fat.h>
 
 #define SYSTICK_FREQ 1000 ///< Frequency of the SysTick set at 1kHz.
 #define COMM_BAUD_RATE 115200UL ///< Baud rate for communication with PC
@@ -69,8 +67,6 @@ int main(void) {
   // test another way of measuring time delays
   uint32_t softTimer = TIMER_GetTime(); // get start time for delay
 
-//  FAT_Init(SD_Init, SD_ReadSectors, SD_WriteSectors);
-
 	while (1) {
 
 	  // test delay method
@@ -104,9 +100,4 @@ void softTimerCallback(void) {
 
   LED_Toggle(LED1); // Toggle LED
 
-}
-
-uint32_t get_fattime() {
-
-  return 0;
 }
