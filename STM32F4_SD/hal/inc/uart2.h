@@ -18,7 +18,7 @@
 #ifndef UART_H_
 #define UART_H_
 
-#include <stm32f4xx.h>
+#include <inttypes.h>
 
 /**
  * @defgroup  USART2 USART2
@@ -30,10 +30,14 @@
  * @{
  */
 
-void    UART2_Init(void);
-void    USART2_Putc(uint8_t c);
-uint8_t USART2_Getc(void);
-uint8_t USART2_GetFrame(uint8_t* buf, uint8_t* len);
+void    UART2_Init(uint32_t baud, void(*rxCb)(uint8_t), uint8_t(*txCb)(uint8_t*));
+void    UART2_TxEnable(void);
+
+// HAL functions for use in higher level
+#define COMM_HAL_Init       UART2_Init
+#define COMM_HAL_TxEnable   UART2_TxEnable
+#define COMM_HAL_IrqEnable  NVIC_EnableIRQ(USART2_IRQn);
+#define COMM_HAL_IrqDisable NVIC_DisableIRQ(USART2_IRQn);
 
 /**
  * @}

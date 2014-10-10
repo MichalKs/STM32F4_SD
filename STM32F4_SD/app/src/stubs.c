@@ -19,7 +19,7 @@
  */
 
 
-#include <uart2.h>
+#include <comm.h>
 
 /*
  * These stubs should be expanded!!!
@@ -66,7 +66,7 @@ int _write(int fileHandle, char *buf, int len) {
 
 	int i;
 	for (i=0; i<len; i++) {
-		USART2_Putc((uint8_t)buf[i]);
+		COMM_Putc((uint8_t)buf[i]);
 	}
 
 	return len;

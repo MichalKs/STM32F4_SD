@@ -16,6 +16,19 @@
  */
 
 #include <fifo.h>
+#include <stdio.h>
+
+#ifndef DEBUG
+  #define DEBUG
+#endif
+
+#ifdef DEBUG
+  #define print(str, args...) printf("FIFO--> "str"%s",##args,"\r")
+  #define println(str, args...) printf("FIFO--> "str"%s",##args,"\r\n")
+#else
+  #define print(str, args...) (void)0
+  #define println(str, args...) (void)0
+#endif
 
 /**
  * @addtogroup FIFO
@@ -36,7 +49,8 @@
 uint8_t FIFO_Add(FIFO_TypeDef* fifo) {
 
   if (fifo->len == 0 ) {
-     return 1;
+    println("Zero FIFO length");
+    return 1;
   }
 
   fifo->tail  = 0;
@@ -56,6 +70,7 @@ uint8_t FIFO_Push(FIFO_TypeDef* fifo, uint8_t c) {
 
   // Check for overflow
   if (fifo->count == fifo->len) {
+    println("FIFO overflow");
     return 1;
   }
 
@@ -80,6 +95,7 @@ uint8_t FIFO_Pop(FIFO_TypeDef* fifo, uint8_t* c) {
 
   // If FIFO is empty
   if (fifo->count == 0) {
+//    println("FIFO is empty");
     return 1;
   }
   *c = fifo->buf[fifo->tail++];

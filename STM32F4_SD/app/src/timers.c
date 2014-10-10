@@ -19,11 +19,22 @@
  * @endverbatim
  */
 
-#include <stm32f4xx.h>
-
 #include <timers.h>
 #include <stdio.h>
+#include <systick.h>
+#include <timer14.h>
 
+#ifndef DEBUG
+  #define DEBUG
+#endif
+
+#ifdef DEBUG
+  #define print(str, args...) printf("LED--> "str"%s",##args,"\r")
+  #define println(str, args...) printf("LED--> "str"%s",##args,"\r\n")
+#else
+  #define print(str, args...) (void)0
+  #define println(str, args...) (void)0
+#endif
 
 /**
  * @addtogroup TIMER
@@ -32,10 +43,7 @@
 
 #define MAX_SOFT_TIMERS 10 ///< Maximum number of soft timers.
 
-static volatile uint32_t delayTimer;  ///< Delay timer.
-static volatile uint32_t sysTicks;    ///< System clock.
-
-static uint8_t softTimerCount;
+static uint8_t softTimerCount; ///< Count number of soft timers
 
 /**
  * @brief Soft timer structure.
@@ -51,40 +59,104 @@ typedef struct {
 static TIMER_Soft_TypeDef softTimers[MAX_SOFT_TIMERS]; ///< Array of soft timers
 
 /**
- * @brief Initiate SysTick with a given frequency.
+ * @brief Initiate the system time interrupt with a given frequency.
  * @param freq Required frequency of the timer in Hz
  */
 void TIMER_Init(uint32_t freq) {
 
-  RCC_ClocksTypeDef RCC_Clocks;
+  SYSTICK_Init(freq); // initialize sysTick for ms count
 
-  RCC_GetClocksFreq(&RCC_Clocks); // Complete the clocks structure with current clock settings.
+  // initialize TIMER14 as microsecond counter
+  TIMER14_Init();
 
-  SysTick_Config(RCC_Clocks.HCLK_Frequency / freq); // Set SysTick frequency
 }
+/**
+ * @brief Returns the system time.
+ * @return System time
+ */
+uint32_t TIMER_GetTime(void) {
+  return SYSTICK_GetTime();
+}
+
 /**
  * @brief Delay function.
  * @param ms Milliseconds to delay.
- * @see delayTimer
+ * @warning This is a blocking function. Use with care!
  */
 void TIMER_Delay(uint32_t ms) {
 
-  delayTimer = ms;
+  uint32_t startTime = TIMER_GetTime();
+  uint32_t currentTime;
 
-  while (delayTimer); // Delay
+  while (1) { // Delay
+    currentTime = TIMER_GetTime();
+    if ((currentTime >= startTime) && (currentTime-startTime > ms)) {
+      break;
+    }
+    // account for system timer overflow
+    if ((currentTime < startTime) && (UINT32_MAX-startTime + currentTime > ms)) {
+      break;
+    }
+  }
+}
+
+/**
+ * @brief Delay function in us.
+ * @param us Microseconds to delay.
+ * @warning This is a blocking function. Use with care!
+ */
+void TIMER_DelayUS(uint32_t us) {
+
+  uint32_t startTime = TIMER14_GetTime();
+  uint32_t currentTime;
+
+  while (1) { // Delay
+    currentTime = TIMER14_GetTime();
+    if ((currentTime >= startTime) && (currentTime-startTime > us)) {
+      break;
+    }
+    // account for system timer overflow
+    if ((currentTime < startTime) && (UINT32_MAX-startTime + currentTime > us)) {
+      break;
+    }
+  }
+}
+
+/**
+ * @brief Nonblocking delay function using
+ * @param ms Delay time
+ * @param startTime System time at start of delay (this has to be written before delay using TIMER_GetTime())
+ * @retval 0 Delay value has not been reached (wait longer)
+ * @retval 1 Delay value has been reached
+ */
+uint8_t TIMER_DelayTimer(uint32_t ms, uint32_t startTime) {
+
+  uint32_t currentTime = TIMER_GetTime();
+
+  if ((currentTime >= startTime) && (currentTime-startTime > ms)) {
+
+    return 1;
+
+  // account for system timer overflow
+  } else if ((currentTime < startTime) && (UINT32_MAX-startTime + currentTime > ms)) {
+    return 1;
+  } else {
+    return 0;
+  }
 
 }
+
 /**
  * @brief Adds a soft timer
  * @param maxVal Overflow value of timer
  * @param fun Function called on overflow (should return void and accept no parameters)
- * @return Returns the ID of the new counter or error code
+ * @return Returns the ID of the new counter or error code (-1)
  * @retval -1 Error: too many timers
  */
 int8_t TIMER_AddSoftTimer(uint32_t maxVal, void (*fun)(void)) {
 
   if (softTimerCount > MAX_SOFT_TIMERS) {
-    printf("TIMERS: Reached maximum number of timers!");
+    println("TIMERS: Reached maximum number of timers!");
     return -1;
   }
 
@@ -98,6 +170,7 @@ int8_t TIMER_AddSoftTimer(uint32_t maxVal, void (*fun)(void)) {
 
   return (softTimerCount - 1);
 }
+
 /**
  * @brief Starts the timer (zeroes out current count value).
  * @param id Timer ID
@@ -134,6 +207,7 @@ void TIMER_SoftTimersUpdate(void) {
 
   static uint32_t prevVal;
   uint32_t delta;
+  uint32_t sysTicks = SYSTICK_GetTime();
 
   if (sysTicks >= prevVal) {
 
@@ -164,18 +238,6 @@ void TIMER_SoftTimersUpdate(void) {
       }
     }
   }
-}
-/**
- * @brief Interrupt handler for SysTick.
- */
-void SysTick_Handler(void) {
-
-  if (delayTimer) {
-    delayTimer--; // Decrement delayTimer
-  }
-
-  sysTicks++; // Update system time
-
 }
 
 /**

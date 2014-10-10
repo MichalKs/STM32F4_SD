@@ -29,6 +29,7 @@
  * @brief Send data in hex format to terminal.
  * @param buf Data buffer.
  * @param length Number of bytes to send.
+ * @warning Uses blocking delays so as not to overflow buffer.
  */
 void hexdump(uint8_t* buf, uint32_t length) {
 

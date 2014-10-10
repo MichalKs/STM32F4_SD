@@ -3,9 +3,14 @@
  * @brief:  Light Emitting Diode control functions.
  * @date:   9 kwi 2014
  * @author: Michal Ksiezopolski
- * 
- * @details This is a very simple library for controlling
- * LEDs.
+ * @details A simple library to add an abstraction
+ * layer to blinking LEDs.
+ * To use the library you need to call LED_Init using
+ * one of the LEDs defined in LED_Number_TypeDef and then
+ * use LED_Toggle or LED_ChangeState with the initialized
+ * LED number.
+ * The various LED ports and pins are defined in
+ * led_hal.c and led_hal.h.
  *
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -21,59 +26,41 @@
 
 #include <stdio.h>
 #include <led.h>
+#include <led_hal.h>
+
+#ifndef DEBUG
+  #define DEBUG
+#endif
+
+#ifdef DEBUG
+  #define print(str, args...) printf("LED--> "str"%s",##args,"\r")
+  #define println(str, args...) printf("LED--> "str"%s",##args,"\r\n")
+#else
+  #define print(str, args...) (void)0
+  #define println(str, args...) (void)0
+#endif
 
 /**
  * @addtogroup LED
  * @{
  */
 
-
-static LED_TypeDef leds[LED_MAX]; ///< LED table.
+static LED_State_TypeDef ledState[MAX_LEDS]; ///< States of the LEDs (MAX_LEDS is hardware dependent)
 
 /**
  * @brief Add an LED.
  * @param led LED init structure.
  */
-void LED_Add(LED_TypeDef* led) {
+void LED_Init(LED_Number_TypeDef led) {
 
   // Check if LED number is correct.
-  if (led->nr >= LED_MAX) {
-    printf("Error: Incorrect LED number!\r\n");
+  if (led >= MAX_LEDS) {
+    println("Error: Incorrect LED number %d!", (int)led);
     return;
   }
 
-  RCC_AHB1PeriphClockCmd(led->clk, ENABLE);
-
-  GPIO_InitTypeDef GPIO_InitStructure;
-
-  // Configure pin in output push/pull mode
-  GPIO_InitStructure.GPIO_Pin = (1 << led->pin);
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz; // less interference
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-
-  GPIO_Init(led->gpio, &GPIO_InitStructure);
-
-  leds[led->nr] = *led; // add LED to array
-
-}
-
-/**
- * @brief Toggle an LED.
- * @param led LED number.
- */
-void LED_Toggle(LED_Number_TypeDef led) {
-
-  if (!leds[led].gpio) {
-    printf("Error: LED doesn't exist!\r\n");
-    return;
-  }
-
-  // Toggle LED
-  GPIO_WriteBit(leds[led].gpio, 1 << leds[led].pin,
-      1-GPIO_ReadOutputDataBit(leds[led].gpio, 1 << leds[led].pin));
-
+  LED_HAL_Init(led);
+  ledState[led] = LED_OFF; // LED initially off
 }
 
 /**
@@ -83,13 +70,47 @@ void LED_Toggle(LED_Number_TypeDef led) {
  */
 void LED_ChangeState(LED_Number_TypeDef led, LED_State_TypeDef state) {
 
-  if (!leds[led].gpio) {
-    printf("Error: LED doesn't exist!\r\n");
+  if (led >= MAX_LEDS) {
+    println("Error: Incorrect LED number %d!", (int)led);
     return;
   }
 
-  GPIO_WriteBit(leds[led].gpio, 1 << leds[led].pin, state);
+  if (ledState[led] == LED_UNUSED) {
+    println("Error: Uninitialized LED %d!", (int)led);
+    return;
+  } else {
+    if (state == LED_OFF) {
+      LED_HAL_ChangeState(led, 0); // turn off LED
+    } else if (state == LED_ON) {
+      LED_HAL_ChangeState(led, 1); // light up LED
+    }
+  }
 
+  ledState[led] = state; // update LED state
+}
+
+/**
+ * @brief Toggle an LED.
+ * @param led LED number.
+ */
+void LED_Toggle(LED_Number_TypeDef led) {
+
+  if (led >= MAX_LEDS) {
+    println("Error: Incorrect LED number %d!", (int)led);
+    return;
+  }
+
+  if (ledState[led] == LED_UNUSED) {
+    println("Error: Uninitialized LED %d!", (int)led);
+    return;
+  } else {
+    if (ledState[led] == LED_OFF) {
+      ledState[led] = LED_ON;
+    } else if (ledState[led] == LED_ON) {
+      ledState[led]= LED_OFF;
+    }
+    LED_HAL_Toggle(led);
+  }
 }
 
 /**
