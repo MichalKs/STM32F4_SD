@@ -18,6 +18,8 @@
 #include <fat.h>
 #include <stdio.h>
 #include <utils.h>
+
+
 #define dprint(...) printf("FAT: "); printf(__VA_ARGS__)
 
 /**
@@ -159,6 +161,13 @@ typedef struct {
 
 static FAT_PhysicalCb phyCallbacks;
 
+/**
+ * @brief Initialize FAT file system
+ * @param phyInit Physical drive initialization function
+ * @param phyReadSectors Read sectors function
+ * @param phyWriteSectors Write sectors function
+ * @return
+ */
 int8_t FAT_Init(void (*phyInit)(void),
     uint8_t (*phyReadSectors)(uint8_t* buf, uint32_t sector, uint32_t count),
     uint8_t (*phyWriteSectors)(uint8_t* buf, uint32_t sector, uint32_t count)) {
