@@ -20,7 +20,17 @@
 #include <utils.h>
 
 
-#define dprint(...) printf("FAT: "); printf(__VA_ARGS__)
+#ifndef DEBUG
+  #define DEBUG
+#endif
+
+#ifdef DEBUG
+  #define print(str, args...) printf(""str"%s",##args,"")
+  #define println(str, args...) printf("FAT--> "str"%s",##args,"\r\n")
+#else
+  #define print(str, args...) (void)0
+  #define println(str, args...) (void)0
+#endif
 
 /**
  * @brief Partition table entry structure.
@@ -186,10 +196,10 @@ int8_t FAT_Init(void (*phyInit)(void),
 
   FAT_MBR* mbr = (FAT_MBR*)buf;
   if (mbr->signature != 0xaa55) {
-    dprint("Invalid disk signature %04x\r\n", mbr->signature);
+    println("Invalid disk signature %04x", mbr->signature);
     return -1;
   }
-  dprint("Valid disk signature\r\n");
+  println("Valid disk signature");
 
 
   hexdump((uint8_t*)mbr->partitionTable, sizeof(FAT_PartitionTableEntry)*4);
@@ -200,11 +210,11 @@ int8_t FAT_Init(void (*phyInit)(void),
 
   for (i=0; i<4; i++) {
     if (mbr->partitionTable[i].type == 0 ) {
-      dprint("Found empty partition\r\n");
+      println("Found empty partition");
     } else {
-      dprint("Partition %d type is: %02x\r\n", i, mbr->partitionTable[i].type);
-      dprint("Partition %d start sector is: %u\r\n", i, (unsigned int)mbr->partitionTable[i].partitionLBA);
-      dprint("Partition %d size is: %u\r\n", i, (unsigned int)mbr->partitionTable[i].size);
+      println("Partition %d type is: %02x", i, mbr->partitionTable[i].type);
+      println("Partition %d start sector is: %u", i, (unsigned int)mbr->partitionTable[i].partitionLBA);
+      println("Partition %d size is: %u", i, (unsigned int)mbr->partitionTable[i].size);
 
       mountedDisks[0].partitionInfo[i].partitionNumber = i;
       mountedDisks[0].partitionInfo[i].type = mbr->partitionTable[i].type;
@@ -220,19 +230,19 @@ int8_t FAT_Init(void (*phyInit)(void),
   FAT32_BootSector* bootSector = (FAT32_BootSector*)buf;
 
   if (bootSector->signature != 0xaa55) {
-    dprint("Invalid partition signature %04x\r\n", mbr->signature);
+    println("Invalid partition signature %04x", mbr->signature);
     return -2;
   }
 
-  dprint("Valid partition signature\r\n");
+  println("Valid partition signature");
 
-  dprint("Partition size is %d\r\n", (unsigned int)bootSector->totalSectors32);
-  dprint("Reserved sectors = %d\r\n", (unsigned int)bootSector->reservedSectors);
-  dprint("Bytes per sector %d\r\n", (unsigned int)bootSector->bytesPerSector);
-  dprint("Hidden sectors %d\r\n", (unsigned int)bootSector->hiddenSectors);
-  dprint("Sectors per cluster =  %d\r\n", (unsigned int)bootSector->sectorsPerCluster);
-  dprint("Number of FATs =  %d\r\n", (unsigned int)bootSector->numberOfFATs);
-  dprint("Sectors per FAT =  %d\r\n", (unsigned int)bootSector->sectorsPerFAT32);
+  println("Partition size is %d", (unsigned int)bootSector->totalSectors32);
+  println("Reserved sectors = %d", (unsigned int)bootSector->reservedSectors);
+  println("Bytes per sector %d", (unsigned int)bootSector->bytesPerSector);
+  println("Hidden sectors %d", (unsigned int)bootSector->hiddenSectors);
+  println("Sectors per cluster =  %d", (unsigned int)bootSector->sectorsPerCluster);
+  println("Number of FATs =  %d", (unsigned int)bootSector->numberOfFATs);
+  println("Sectors per FAT =  %d", (unsigned int)bootSector->sectorsPerFAT32);
 
   uint32_t rootDirSector = mountedDisks[0].partitionInfo[0].startAddress +
       bootSector->reservedSectors + 2*bootSector->sectorsPerFAT32;
