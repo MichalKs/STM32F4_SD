@@ -74,13 +74,25 @@
 #define SD_ACMD41_HCS     (1<<30) ///< Host can handle SDSC and SDHC cards
 
 /*
- * Tokens
+ * Control tokens
  */
-#define SD_TOKEN_SBR_MBR_SBW 0xfe
 
+#define SD_TOKEN_SBR_MBR_SBW  0xfe ///< Start block for single block read, multiple block read, single block write. This token is sent, then 2-513 bytes of data, two bytes CRC
+#define SD_TOKEN_MBW_START    0xfc ///< Start block token for multiple block write - data will be transferred
+#define SD_TOKEN_MBW_STOP     0xfd ///< Stop transmission token for multiple block write
+
+/*
+ * Every data block sent to SD card will be acknowledged by data response token.
+ * In case of error during Multiple Block Write host shall stop transmission
+ * using CMD12. ACMD22 may be used to find number of well written blocks.
+ * CMD13 may be sent to get cause of write problem
+ */
+#define SD_TOKEN_DATA_ACCEPTED  0x05 ///< Data accepted
+#define SD_TOKEN_DATA_CRC       0x0b ///< Data rejected due to CRC error
+#define SD_TOKEN_DATA_WRITE_ERR 0x0d ///< Data rejected due to write error
 
 static uint8_t SD_SendCommand(uint8_t cmd, uint32_t args);
-static uint8_t SD_GetResponseR3orR7(uint8_t* buf);
+static void SD_GetResponseR3orR7(uint8_t* buf);
 
 #define SD_HAL_Init SPI1_Init
 #define SD_HAL_SelectCard SPI1_Select
@@ -92,17 +104,19 @@ static uint8_t isSDHC; ///< Is the card SDHC?
 
 /**
  * @brief SD Card R1 response structure
+ * @details This token is sent after every command
+ * with the exception of SEND_STATUS command
  */
 typedef union {
 
   struct {
-    uint8_t inIdleState         :1; ///<
-    uint8_t eraseReset          :1; ///<
-    uint8_t illegalCommand      :1; ///<
-    uint8_t commErrorCRC        :1; ///<
-    uint8_t eraseSequenceError  :1; ///<
-    uint8_t addressErrror       :1; ///<
-    uint8_t parameterError      :1; ///<
+    uint8_t inIdleState         :1; ///< The card is in IDLE state
+    uint8_t eraseReset          :1; ///< Erase sequence was cleared before executing because an out of erase sequence commands was received
+    uint8_t illegalCommand      :1; ///< Illegal command code detected
+    uint8_t commErrorCRC        :1; ///< CRC check of last command failed
+    uint8_t eraseSequenceError  :1; ///< Error in sequence of erase commands
+    uint8_t addressErrror       :1; ///< Misaligned address didn't match block length used in command
+    uint8_t parameterError      :1; ///< Command's argument was outside the range allowed for the card
     uint8_t reserved            :1; ///< Reserved (always 0)
   } flags;
 
@@ -111,25 +125,27 @@ typedef union {
 
 /**
  * @brief SD Card R2 response structure
+ * @details This token is sent in response to SEND_STATUS command.
+ *
  */
 typedef union {
 
   struct {
-    uint16_t cardLocked          :1; ///<
-    uint16_t wpEraseSkip         :1; ///<
-    uint16_t error               :1; ///<
-    uint16_t errorCC             :1; ///<
-    uint16_t cardFailedECC       :1; ///<
-    uint16_t wpViolation         :1; ///<
-    uint16_t eraseParam          :1; ///<
+    uint16_t cardLocked          :1; ///< Set when card is locked bu user
+    uint16_t wpEraseSkip         :1; ///< Set when host attempts to write a write-protected sector or makes errors during card lock/unlock operation
+    uint16_t error               :1; ///< General or unknown error occured
+    uint16_t errorCC             :1; ///< Internal card controller error
+    uint16_t cardFailedECC       :1; ///< Card internal ECC was applied but failed to correct data
+    uint16_t wpViolation         :1; ///< Command tried to write a write-protected block
+    uint16_t eraseParam          :1; ///< Invalid selection for erase, sectors, groups.
     uint16_t outOfRange          :1; ///<
-    uint16_t inIdleState         :1; ///<
-    uint16_t eraseReset          :1; ///<
-    uint16_t illegalCommand      :1; ///<
-    uint16_t commErrorCRC        :1; ///<
-    uint16_t eraseSequenceError  :1; ///<
-    uint16_t addressErrror       :1; ///<
-    uint16_t parameterError      :1; ///<
+    uint16_t inIdleState         :1; ///< The card is in IDLE state
+    uint16_t eraseReset          :1; ///< Erase sequence was cleared before executing because an out of erase sequence commands was received
+    uint16_t illegalCommand      :1; ///< Illegal command code detected
+    uint16_t commErrorCRC        :1; ///< CRC check of last command failed
+    uint16_t eraseSequenceError  :1; ///< Error in sequence of erase commands
+    uint16_t addressErrror       :1; ///< Misaligned address didn't match block length used in command
+    uint16_t parameterError      :1; ///< Command's argument was outside the range allowed for the card
     uint16_t reserved            :1; ///< Reserved (always 0)
   } flags;
 
@@ -167,12 +183,13 @@ typedef union {
  * @brief Initialize the SD card.
  *
  * @details This function initializes both SDSC and SDHC cards.
+ * It uses low-level SPI functions.
  *
  */
 void SD_Init(void) {
 
-  int i;
-  uint8_t buf[10];
+  int i; // for counter
+  uint8_t buf[10]; // buffer for responses
 
   SD_HAL_Init(); // Initialize SPI interface.
 
@@ -183,9 +200,9 @@ void SD_Init(void) {
     SD_HAL_TransmitData(0xff);
   }
 
-  SD_ResponseR1 resp;
+  SD_ResponseR1 resp; // response R1 token
 
-  // CMD0
+  // send CMD0
   resp.responseR1 = SD_SendCommand(SD_GO_IDLE_STATE, 0);
 
   // Check response errors
@@ -193,7 +210,7 @@ void SD_Init(void) {
     println("GO_IDLE_STATE error");
   }
 
-  // CMD8
+  // send CMD8
   resp.responseR1 = SD_SendCommand(SD_SEND_IF_COND,
       SD_IF_COND_VOLT | SD_IF_COND_CHECK); // voltage range and check pattern
 
@@ -393,7 +410,16 @@ static uint8_t SD_SendCommand(uint8_t cmd, uint32_t args) {
   return ret;
 }
 
-static uint8_t SD_GetResponseR3orR7(uint8_t* buf) {
+/**
+ * @brief Get R3 or R7 response from card
+ *
+ * @details R3 response is for READ_OCR command (it is actually five bytes R1
+ * + 4 bytes of OCR read by this function). R7 is for SEND_IF_COND command
+ * (also R1 + 4 bytes containing voltage information)
+ *
+ * @param buf Buffer for response
+ */
+static void SD_GetResponseR3orR7(uint8_t* buf) {
 
   uint8_t i = 0;
   buf[i++] = SD_HAL_TransmitData(0xff);
@@ -401,7 +427,6 @@ static uint8_t SD_GetResponseR3orR7(uint8_t* buf) {
   buf[i++] = SD_HAL_TransmitData(0xff);
   buf[i++] = SD_HAL_TransmitData(0xff);
 
-  return 0;
 }
 /**
  * @}
