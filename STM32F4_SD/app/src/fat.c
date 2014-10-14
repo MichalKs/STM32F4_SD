@@ -63,21 +63,22 @@ typedef struct {
   uint8_t   sectorsPerCluster; ///< Number of sectors per allocation unit (cluster). Legal values: 1,2,4,8,16,32,64 and 128 @warning Cluster size in bytes cannot be bigger than 32Kbytes
   uint16_t  reservedSectors;   ///< Number of reserved sectors. For FAT12 and FAT16 this value should be 1. For FAT32 usually 32
   uint8_t   numberOfFATs;      ///< Number of FAT data structures on partition (should be 2)
-  uint16_t  rootEntries;       ///< Number of 32-byte entries in root directory
-  uint16_t  totalSectors16;    ///< Total count of sectors on volume
+  uint16_t  rootEntries;       ///< Number of 32-byte entries in root directory for FAT12/16. For FAT32 this is 0.
+  uint16_t  totalSectors16;    ///< Total count of sectors on volume. For FAT32 this is 0.
   uint8_t   mediaType;         ///< 0xf8 - non-removable media, 0xf0 - removable media
-  uint16_t  sectorsPerFAT;     ///< Number of sectors occupied by one FAT
-  uint16_t  sectorsPerTrack;   ///< Number of sectors per track
-  uint16_t  headsPerCylinder;  ///< Number of heads per cylinder
+  uint16_t  sectorsPerFAT;     ///< Number of sectors occupied by one FAT. For FAT32 this is 0.
+  uint16_t  sectorsPerTrack;   ///< Number of sectors per track. Only for INT 0x13 on PC.
+  uint16_t  headsPerCylinder;  ///< Number of heads per cylinder. Only for INT 0x13 on PC.
   uint32_t  hiddenSectors;     ///< Number of hidden sectors preceding this partition
   uint32_t  totalSectors32;    ///< New 32-bit count of sectors on volume (optional in FAT12/16)
+
   uint8_t   driveNumber;       ///< 0x00 - floppy disk, 0x80 - hard disk
   uint8_t   unused;            ///< Unused - always 0
   uint8_t   bootSignature;     ///< Extended boot signature - 0x29 - indicates the following 3 fields are present
   uint32_t  volumeID;          ///< Volume serial number
   uint8_t   volumeLabel[11];   ///< Volume label
   uint8_t   filesystem[8];     ///< File system name - string
-  uint8_t   bootcode[448];     ///<
+  uint8_t   bootcode[448];     ///< Bootloader code
   uint16_t  signature;         ///< Boot signature 0xaa55
 } __attribute((packed)) FAT16_BootSector;
 
@@ -91,21 +92,21 @@ typedef struct {
   uint8_t   sectorsPerCluster; ///< Number of sectors per allocation unit (cluster). Legal values: 1,2,4,8,16,32,64 and 128 @warning Cluster size in bytes cannot be bigger than 32Kbytes
   uint16_t  reservedSectors;   ///< Number of reserved sectors. For FAT12 and FAT16 this value should be 1. For FAT32 usually 32
   uint8_t   numberOfFATs;      ///< Number of FAT data structures on partition (should be 2)
-  uint16_t  rootEntries;       ///< Number of 32-byte entries in root directory
-  uint16_t  totalSectors16;    ///< Total count of sectors on volume
+  uint16_t  rootEntries;       ///< Number of 32-byte entries in root directory for FAT12/16. For FAT32 this is 0.
+  uint16_t  totalSectors16;    ///< Total count of sectors on volume. For FAT32 this is 0.
   uint8_t   mediaType;         ///< 0xf8 - non-removable media, 0xf0 - removable media
-  uint16_t  sectorsPerFAT;     ///< Number of sectors occupied by one FAT
-  uint16_t  sectorsPerTrack;   ///< Number of sectors per track
-  uint16_t  headsPerCylinder;  ///< Number of heads per cylinder
+  uint16_t  sectorsPerFAT;     ///< Number of sectors occupied by one FAT. For FAT32 this is 0.
+  uint16_t  sectorsPerTrack;   ///< Number of sectors per track. Only for INT 0x13 on PC.
+  uint16_t  headsPerCylinder;  ///< Number of heads per cylinder. Only for INT 0x13 on PC.
   uint32_t  hiddenSectors;     ///< Number of hidden sectors preceding this partition
   uint32_t  totalSectors32;    ///< New 32-bit count of sectors on volume (optional in FAT12/16)
 
-  uint32_t  sectorsPerFAT32;   ///<
-  uint16_t  fags;            ///<
-  uint16_t  fsVersion;     ///<
-  uint32_t  rootCluster;          ///<
-  uint16_t  fsInfo;   ///<
-  uint16_t  backupBootSector;     ///<
+  uint32_t  sectorsPerFAT32;   ///< Number of sectors occupied by one FAT.
+  uint16_t  flags;             ///<
+  uint16_t  fsVersion;         ///< Version number. High byte - major revision. Low byte - minor revision.
+  uint32_t  rootCluster;       ///< Cluster number of the first cluster of the root directory - usually 2
+  uint16_t  fsInfo;            ///< Sector number of the FSINFO structure in the reserved area of the FAT32 volume - usually 1.
+  uint16_t  backupBootSector;  ///< Sector number in reserved area with a copy of the boot records
   uint8_t   reserved[12];
   uint8_t   driveNumber;       ///< 0x00 - floppy disk, 0x80 - hard disk
   uint8_t   reserved1;
@@ -113,12 +114,12 @@ typedef struct {
   uint32_t  volumeID;          ///< Volume serial number
   uint8_t   volumeLabel[11];   ///< Volume label
   uint8_t   filesystem[8];     ///< File system name - string
-  uint8_t   bootcode[420];     ///< FIXME
+  uint8_t   bootcode[420];     ///< Bootloader code
   uint16_t  signature;         ///< Boot signature 0xaa55
 } __attribute((packed)) FAT32_BootSector;
 
 /**
- * Root directory entry
+ * @brief Root directory entry
  */
 typedef struct {
   uint8_t filename[8];
@@ -208,7 +209,8 @@ int8_t FAT_Init(void (*phyInit)(void),
 
   int i;
 
-  for (i=0; i<4; i++) {
+  // 4 partition table entriess
+  for (i = 0; i < 4; i++) {
     if (mbr->partitionTable[i].type == 0 ) {
       println("Found empty partition");
     } else {
@@ -244,9 +246,35 @@ int8_t FAT_Init(void (*phyInit)(void),
   println("Number of FATs =  %d", (unsigned int)bootSector->numberOfFATs);
   println("Sectors per FAT =  %d", (unsigned int)bootSector->sectorsPerFAT32);
 
-  uint32_t rootDirSector = mountedDisks[0].partitionInfo[0].startAddress +
-      bootSector->reservedSectors + 2*bootSector->sectorsPerFAT32;
+  println("Root cluster = %d", (unsigned int)bootSector->rootCluster);
 
+
+  uint32_t fatStart = mountedDisks[0].partitionInfo[0].startAddress +
+      bootSector->reservedSectors;
+
+  uint32_t clusterStart = fatStart + bootSector->numberOfFATs *
+      bootSector->sectorsPerFAT32;
+
+  uint32_t sectorsPerCluster = bootSector->sectorsPerCluster;
+
+  uint32_t rootCluster = bootSector->rootCluster;
+
+  // computing LBA address of data
+//  uint32_t lbaAddress = clusterStart + (cluster - 2) * sectorsPerCluster;
+
+  println("FATs start at sector %d", (unsigned int)fatStart);
+
+  phyCallbacks.phyReadSectors(buf, fatStart, 1);
+  hexdump(buf, 512);
+  println("Root dir");
+  phyCallbacks.phyReadSectors(buf, clusterStart, 1);
+  hexdump(buf, 512);
+
+//  uint32_t rootDirSector = mountedDisks[0].partitionInfo[0].startAddress +
+//      bootSector->reservedSectors + 2*bootSector->sectorsPerFAT32;
+//  println("Root dir sector = %d", (unsigned int)rootDirSector);
 
   return 0;
 }
+
+uint32_t FAT_SearchRootDir(char* filename)
