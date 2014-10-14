@@ -18,7 +18,7 @@
 #include <fat.h>
 #include <stdio.h>
 #include <utils.h>
-
+#include <string.h>
 
 #ifndef DEBUG
   #define DEBUG
@@ -270,6 +270,30 @@ int8_t FAT_Init(void (*phyInit)(void),
   phyCallbacks.phyReadSectors(buf, clusterStart, 1);
   hexdump(buf, 512);
 
+  FAT_RootDirEntry* dirEntry = (FAT_RootDirEntry*)buf;
+
+  char filename[12];
+  char* ptr;
+  int j;
+
+  for (i = 0; i< 20; i++) {
+
+    ptr = (char*)dirEntry->filename;
+
+    for (j=0; j<11; j++) {
+      filename[j] = *ptr++;
+    }
+    filename[11] = 0;
+
+    println("Filename %s", filename);
+
+    if (!strcmp(filename, "HELLO   TXT")) {
+      println("Found file %s!!!!", filename);
+    }
+
+    dirEntry++;
+  }
+
 //  uint32_t rootDirSector = mountedDisks[0].partitionInfo[0].startAddress +
 //      bootSector->reservedSectors + 2*bootSector->sectorsPerFAT32;
 //  println("Root dir sector = %d", (unsigned int)rootDirSector);
@@ -277,4 +301,7 @@ int8_t FAT_Init(void (*phyInit)(void),
   return 0;
 }
 
-uint32_t FAT_SearchRootDir(char* filename)
+uint32_t FAT_SearchRootDir(char* filename) {
+
+  return 0;
+}
