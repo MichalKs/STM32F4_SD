@@ -146,7 +146,9 @@ typedef struct {
   uint32_t startAddress;
   uint32_t length;
   uint32_t startFatSector;
-
+  uint32_t rootDirSector;
+  uint32_t dataStartSector;
+  uint32_t sectorsPerCluster;
 } FAT_PartitionInfo;
 
 /**
@@ -171,6 +173,11 @@ typedef struct {
 } FAT_PhysicalCb;
 
 static FAT_PhysicalCb phyCallbacks;
+
+
+
+uint32_t FAT_Cluster2Sector(uint32_t cluster);
+uint32_t FAT_ListRootDir(void);
 
 /**
  * @brief Initialize FAT file system
@@ -249,15 +256,28 @@ int8_t FAT_Init(void (*phyInit)(void),
   println("Root cluster = %d", (unsigned int)bootSector->rootCluster);
 
 
+  // Sector on disk where FAT is (from start of disk)
   uint32_t fatStart = mountedDisks[0].partitionInfo[0].startAddress +
       bootSector->reservedSectors;
+  mountedDisks[0].partitionInfo[0].startFatSector = fatStart;
 
+
+  // Sector on disk where data clusters start
+  // Cluster count start from 2
+  // So this sector is where cluster 2 is allocated on disk
   uint32_t clusterStart = fatStart + bootSector->numberOfFATs *
       bootSector->sectorsPerFAT32;
 
+  mountedDisks[0].partitionInfo[0].dataStartSector = clusterStart;
+
   uint32_t sectorsPerCluster = bootSector->sectorsPerCluster;
 
+  // needed for mapping clusters to sectors
+  mountedDisks[0].partitionInfo[0].sectorsPerCluster = sectorsPerCluster;
+
   uint32_t rootCluster = bootSector->rootCluster;
+
+  mountedDisks[0].partitionInfo[0].rootDirSector = FAT_Cluster2Sector(rootCluster);
 
   // computing LBA address of data
 //  uint32_t lbaAddress = clusterStart + (cluster - 2) * sectorsPerCluster;
@@ -266,33 +286,10 @@ int8_t FAT_Init(void (*phyInit)(void),
 
   phyCallbacks.phyReadSectors(buf, fatStart, 1);
   hexdump(buf, 512);
-  println("Root dir");
-  phyCallbacks.phyReadSectors(buf, clusterStart, 1);
-  hexdump(buf, 512);
 
-  FAT_RootDirEntry* dirEntry = (FAT_RootDirEntry*)buf;
 
-  char filename[12];
-  char* ptr;
-  int j;
+  FAT_ListRootDir();
 
-  for (i = 0; i< 20; i++) {
-
-    ptr = (char*)dirEntry->filename;
-
-    for (j=0; j<11; j++) {
-      filename[j] = *ptr++;
-    }
-    filename[11] = 0;
-
-    println("Filename %s", filename);
-
-    if (!strcmp(filename, "HELLO   TXT")) {
-      println("Found file %s!!!!", filename);
-    }
-
-    dirEntry++;
-  }
 
 //  uint32_t rootDirSector = mountedDisks[0].partitionInfo[0].startAddress +
 //      bootSector->reservedSectors + 2*bootSector->sectorsPerFAT32;
@@ -301,7 +298,62 @@ int8_t FAT_Init(void (*phyInit)(void),
   return 0;
 }
 
-uint32_t FAT_SearchRootDir(char* filename) {
+//lba_addr = cluster_begin_lba + (cluster_number - 2) * sectors_per_cluster;
+uint32_t FAT_Cluster2Sector(uint32_t cluster) {
+
+  uint32_t sector = mountedDisks[0].partitionInfo[0].dataStartSector
+      + (cluster - 2) * mountedDisks[0].partitionInfo[0].sectorsPerCluster;
+
+  return sector;
+}
+
+uint32_t FAT_ListRootDir(void) {
+
+  println("Root dir");
+
+  uint8_t buf[512];
+
+  // read first sector of root dir
+  phyCallbacks.phyReadSectors(buf,
+      mountedDisks[0].partitionInfo[0].rootDirSector, 1);
+
+  hexdump(buf, 512);
+
+  FAT_RootDirEntry* dirEntry = (FAT_RootDirEntry*)buf;
+
+  char filename[12];
+  char* ptr;
+  int i, j;
+
+
+  for (i = 0; i< 16; i++) {
+
+    println("FILE %d:", i);
+
+    ptr = (char*)dirEntry->filename;
+
+    // check if file is empty
+    if (dirEntry->filename[0] == 0x00 || dirEntry->filename[0] == 0xe5) {
+      println("Empty file");
+      dirEntry++;
+      continue;
+    }
+
+    for (j=0; j<11; j++) {
+      filename[j] = *ptr++;
+    }
+    filename[11] = 0;
+
+    println("Filename %s, attributes 0x%x, file size %d",
+        filename, (unsigned int)dirEntry->attributes,
+        (unsigned int)dirEntry->fileSize);
+
+    if (!strcmp(filename, "HELLO   TXT")) {
+      println("Found file %s!!!!", filename);
+    }
+
+    dirEntry++;
+  }
 
   return 0;
 }
