@@ -177,7 +177,7 @@ static FAT_PhysicalCb phyCallbacks;
 
 
 uint32_t FAT_Cluster2Sector(uint32_t cluster);
-uint32_t FAT_ListRootDir(void);
+void FAT_ListRootDir(void);
 
 /**
  * @brief Initialize FAT file system
@@ -298,7 +298,11 @@ int8_t FAT_Init(void (*phyInit)(void),
   return 0;
 }
 
-//lba_addr = cluster_begin_lba + (cluster_number - 2) * sectors_per_cluster;
+/**
+ * @brief Converts cluster number to sector number from start of drive
+ * @param cluster Cluster number
+ * @return Sector number counting from the start of the drive.
+ */
 uint32_t FAT_Cluster2Sector(uint32_t cluster) {
 
   uint32_t sector = mountedDisks[0].partitionInfo[0].dataStartSector
@@ -307,7 +311,11 @@ uint32_t FAT_Cluster2Sector(uint32_t cluster) {
   return sector;
 }
 
-uint32_t FAT_ListRootDir(void) {
+/**
+ * @brief Lists files in root directory of volume
+ * TODO Finish this function
+ */
+void FAT_ListRootDir(void) {
 
   println("Root dir");
 
@@ -325,7 +333,7 @@ uint32_t FAT_ListRootDir(void) {
   char* ptr;
   int i, j;
 
-
+  // 16 entries in one sector
   for (i = 0; i< 16; i++) {
 
     println("FILE %d:", i);
@@ -338,13 +346,18 @@ uint32_t FAT_ListRootDir(void) {
       dirEntry++;
       continue;
     }
+    if (dirEntry->attributes == 0x0f) {
+      println("Long file");
+      dirEntry++;
+      continue;
+    }
 
     for (j=0; j<11; j++) {
       filename[j] = *ptr++;
     }
     filename[11] = 0;
 
-    println("Filename %s, attributes 0x%x, file size %d",
+    println("Filename %s, attributes 0x%02x, file size %d",
         filename, (unsigned int)dirEntry->attributes,
         (unsigned int)dirEntry->fileSize);
 
@@ -355,5 +368,4 @@ uint32_t FAT_ListRootDir(void) {
     dirEntry++;
   }
 
-  return 0;
 }
