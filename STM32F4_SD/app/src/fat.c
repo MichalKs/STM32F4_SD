@@ -122,19 +122,19 @@ typedef struct {
  * @brief Root directory entry
  */
 typedef struct {
-  uint8_t filename[8];
-  uint8_t extension[3];
-  uint8_t attributes;
+  uint8_t filename[8];        ///< Name of file
+  uint8_t extension[3];       ///< Extension of file
+  uint8_t attributes;         ///< Attributes. 0x01 - read only, 0x02 - hidden, 0x04 - system, 0x08 - volume ID, 0x10 - directory, 0x20 - archive
   uint8_t unused;
-  uint8_t createTimeMs;
-  uint16_t creationTime;
-  uint16_t creationDate;
-  uint16_t lastAccess;
-  uint16_t whatever;
-  uint16_t lastModifiedTime;
-  uint16_t lastModifiedDate;
-  uint16_t firstCluster;
-  uint32_t fileSize;
+  uint8_t createTimeTS;       ///< Creation time in tenths of a second
+  uint16_t creationTime;      ///< Creation time - hours, minutes and seconds
+  uint16_t creationDate;      ///< Year, month, day of file creation
+  uint16_t lastAccess;        ///< Last access date - same format as creation date
+  uint16_t firstClusterH;     ///< High 16 bits of cluster. Always 0 for FAT12/16
+  uint16_t lastModifiedTime;  ///< Time of last modification
+  uint16_t lastModifiedDate;  ///< Date of last modification
+  uint16_t firstClusterL;     ///< Low 16 bits of cluster
+  uint32_t fileSize;          ///< Size of file in bytes.
 } __attribute((packed)) FAT_RootDirEntry;
 
 /**
