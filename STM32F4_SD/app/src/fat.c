@@ -197,6 +197,7 @@ static FAT_PhysicalCb phyCallbacks;
 uint32_t FAT_Cluster2Sector(uint32_t cluster);
 void FAT_ListRootDir(void);
 uint32_t FAT_GetEntryInFAT(uint32_t cluster);
+uint32_t FAT_FindFile(char* file);
 
 /**
  * @brief Initialize FAT file system
@@ -328,6 +329,10 @@ int8_t FAT_Init(void (*phyInit)(void),
 
   FAT_ListRootDir();
 
+
+  FAT_FindFile("HELLO   TXT");
+  FAT_FindFile("HAMLET  TXT");
+  FAT_FindFile("LOL     TXT");
   return 0;
 }
 
@@ -418,13 +423,59 @@ void FAT_ListRootDir(void) {
 
 }
 
-uint32_t FAT_FindFile(char* filename) {
+uint32_t FAT_FindFile(char* file) {
 
   uint8_t buf[512];
 
-  // read first sector of root dir
-  phyCallbacks.phyReadSectors(buf,
-      mountedDisks[0].partitionInfo[0].rootDirSector, 1);
+  uint32_t i = 0, j = 0, k = 0;
+  FAT_RootDirEntry* dirEntry = 0;
+  char* ptr;
+  char filename[12];
+
+  while(1) {
+
+    if (!i%mountedDisks[0].partitionInfo[0].sectorsPerCluster) {
+      // read new cluster of root directory
+    }
+
+    if (!i%16) {
+
+      // read new sector every 16 entries
+      phyCallbacks.phyReadSectors(buf,
+          mountedDisks[0].partitionInfo[0].rootDirSector + j, 1);
+
+      println("Read sector %d", mountedDisks[0].partitionInfo[0].rootDirSector + j);
+
+      // first entry in buffer
+      dirEntry = (FAT_RootDirEntry*)buf;
+      j++;
+    }
+
+    i++;
+
+    if (dirEntry->filename[0] == 0x00) {
+      // last root dir entry
+      println("File not found");
+      break;
+    }
+
+    if (dirEntry->filename[0] == 0xe5) {
+      println("Empty file");
+      dirEntry++;
+      continue;
+    }
+
+    ptr = (char*)dirEntry->filename;
+    for (k=0; k<11; k++) {
+      filename[k] = *ptr++;
+    }
+    filename[11] = 0;
+    if (!strcmp(filename, file)) {
+      println("Found file %s!!!!", file);
+      break;
+    }
+    dirEntry++;
+  }
 
   return 0;
 }
