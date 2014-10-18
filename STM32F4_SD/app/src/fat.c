@@ -34,6 +34,9 @@
 
 /**
  * @brief Partition table entry structure.
+ *
+ * @details The partition table is included in the first sector of the physical drive
+ * and is used for identifying the partitions present on the disk.
  */
 typedef struct {
   uint8_t   activeFlag;     ///< Active flag, 0x80 - bootable, 0x00 - inactive
@@ -44,6 +47,16 @@ typedef struct {
   uint32_t  size;           ///< Number of sectors in partition
 } __attribute((packed)) FAT_PartitionTableEntry;
 
+typedef enum {
+  PAR_TYPE_EMPTY = 0x00,
+  PAR_TYPE_FAT12 = 0x01,
+  PAR_TYPE_FAT16_32M = 0x04,
+  PAR_TYPE_EXTENDED = 0x05,
+  PAR_TYPE_FAT16 = 0x06,
+  PAR_TYPE_NTFS = 0x07,
+  PAR_TYPE_FAT32 = 0x0b,
+
+} FAT_PartitonType;
 /**
  * @brief Master boot record structure.
  */
@@ -139,16 +152,21 @@ typedef struct {
 
 /**
  * @brief Structure containing info about partition structure
+ *
+ * @details This is used by the application to store the relevant data
+ * read from the partition table and the bootsector of the partition.
+ *
  */
 typedef struct {
-  uint8_t partitionNumber;
-  uint8_t type;
-  uint32_t startAddress;
-  uint32_t length;
-  uint32_t startFatSector;
-  uint32_t rootDirSector;
-  uint32_t dataStartSector;
-  uint32_t sectorsPerCluster;
+  uint8_t partitionNumber;  ///< Number of the partition on disk (as in MBR)
+  uint8_t type;             ///< Type of the partition - file system type
+  uint32_t startAddress;    ///< Start address - LBA sector number
+  uint32_t length;          ///< Length of partition in sectors
+  uint32_t startFatSector;  ///< Sector where FAT start
+  uint32_t rootDirSector;   ///< Sector where root directory starts
+  uint32_t dataStartSector; ///< Sector where data starts
+  uint32_t sectorsPerCluster; ///< Number of sectors per cluster
+  uint32_t bytesPerSector;    ///< Number of bytes per sector
 } FAT_PartitionInfo;
 
 /**
@@ -161,7 +179,7 @@ typedef struct {
 
 #define FAT_MAX_DISKS 2
 
-FAT_DiskInfo mountedDisks[FAT_MAX_DISKS];
+static FAT_DiskInfo mountedDisks[FAT_MAX_DISKS];
 
 /**
  * @brief Physical layer callbacks.
@@ -178,6 +196,7 @@ static FAT_PhysicalCb phyCallbacks;
 
 uint32_t FAT_Cluster2Sector(uint32_t cluster);
 void FAT_ListRootDir(void);
+uint32_t FAT_GetEntryInFAT(uint32_t cluster);
 
 /**
  * @brief Initialize FAT file system
@@ -197,7 +216,7 @@ int8_t FAT_Init(void (*phyInit)(void),
   // initialize physical layer
   phyCallbacks.phyInit();
 
-  uint8_t buf[512];
+  uint8_t buf[512]; // buffer for read sectors
 
   // Read MBR
   phyCallbacks.phyReadSectors(buf, 0, 1);
@@ -209,19 +228,21 @@ int8_t FAT_Init(void (*phyInit)(void),
   }
   println("Valid disk signature");
 
-
+  // dump partition table
   hexdump((uint8_t*)mbr->partitionTable, sizeof(FAT_PartitionTableEntry)*4);
 
+  // TODO Extend to more than one disk
   mountedDisks[0].diskID = 0;
 
-  int i;
-
-  // 4 partition table entriess
-  for (i = 0; i < 4; i++) {
+  // 4 partition table entries
+  for (int i = 0; i < 4; i++) {
     if (mbr->partitionTable[i].type == 0 ) {
       println("Found empty partition");
     } else {
       println("Partition %d type is: %02x", i, mbr->partitionTable[i].type);
+      if (mbr->partitionTable[i].type == PAR_TYPE_FAT32) {
+        println("FAT32 partition found");
+      }
       println("Partition %d start sector is: %u", i, (unsigned int)mbr->partitionTable[i].partitionLBA);
       println("Partition %d size is: %u", i, (unsigned int)mbr->partitionTable[i].size);
 
@@ -245,20 +266,39 @@ int8_t FAT_Init(void (*phyInit)(void),
 
   println("Valid partition signature");
 
+  // We already have length from partition table
   println("Partition size is %d", (unsigned int)bootSector->totalSectors32);
+
+  if (bootSector->totalSectors32 != mountedDisks[0].partitionInfo[0].length) {
+    println("Error: Wrong partition size");
+    while(1);
+  }
+  // reserved sectors are the sectors before the FAT including boot sector
   println("Reserved sectors = %d", (unsigned int)bootSector->reservedSectors);
+
   println("Bytes per sector %d", (unsigned int)bootSector->bytesPerSector);
+
+  if (bootSector->bytesPerSector != 512) {
+    // TODO Make library sector length independent
+    println("Error: incompatible sector length");
+    while(1);
+  }
+  // hidden sectors are the sectors on disk preceding partition
   println("Hidden sectors %d", (unsigned int)bootSector->hiddenSectors);
   println("Sectors per cluster =  %d", (unsigned int)bootSector->sectorsPerCluster);
   println("Number of FATs =  %d", (unsigned int)bootSector->numberOfFATs);
   println("Sectors per FAT =  %d", (unsigned int)bootSector->sectorsPerFAT32);
 
+  // The cluster where the root directory is at
   println("Root cluster = %d", (unsigned int)bootSector->rootCluster);
+  println("FSInfo structure is at sector %d", (unsigned int)bootSector->fsInfo);
+  println("Backup boot sector is at sector %d", (unsigned int)bootSector->backupBootSector);
 
 
   // Sector on disk where FAT is (from start of disk)
   uint32_t fatStart = mountedDisks[0].partitionInfo[0].startAddress +
       bootSector->reservedSectors;
+
   mountedDisks[0].partitionInfo[0].startFatSector = fatStart;
 
 
@@ -275,25 +315,18 @@ int8_t FAT_Init(void (*phyInit)(void),
   // needed for mapping clusters to sectors
   mountedDisks[0].partitionInfo[0].sectorsPerCluster = sectorsPerCluster;
 
+  mountedDisks[0].partitionInfo[0].bytesPerSector = bootSector->bytesPerSector;
+
   uint32_t rootCluster = bootSector->rootCluster;
 
   mountedDisks[0].partitionInfo[0].rootDirSector = FAT_Cluster2Sector(rootCluster);
-
-  // computing LBA address of data
-//  uint32_t lbaAddress = clusterStart + (cluster - 2) * sectorsPerCluster;
 
   println("FATs start at sector %d", (unsigned int)fatStart);
 
   phyCallbacks.phyReadSectors(buf, fatStart, 1);
   hexdump(buf, 512);
 
-
   FAT_ListRootDir();
-
-
-//  uint32_t rootDirSector = mountedDisks[0].partitionInfo[0].startAddress +
-//      bootSector->reservedSectors + 2*bootSector->sectorsPerFAT32;
-//  println("Root dir sector = %d", (unsigned int)rootDirSector);
 
   return 0;
 }
@@ -310,6 +343,8 @@ uint32_t FAT_Cluster2Sector(uint32_t cluster) {
 
   return sector;
 }
+
+
 
 /**
  * @brief Lists files in root directory of volume
@@ -363,9 +398,60 @@ void FAT_ListRootDir(void) {
 
     if (!strcmp(filename, "HELLO   TXT")) {
       println("Found file %s!!!!", filename);
+
+      uint32_t cluster = (((uint32_t)(dirEntry->firstClusterH))<<16) |
+          (uint32_t)dirEntry->firstClusterL;
+      println("File is at cluster %d", (unsigned int)cluster);
+      println("File is at sector %d", (unsigned int)FAT_Cluster2Sector(cluster));
+      println("File size is %d",(unsigned int)dirEntry->fileSize);
+
+      phyCallbacks.phyReadSectors(buf, FAT_Cluster2Sector(cluster), 1);
+
+      hexdump(buf, 512);
+      println("%s",buf);
+
+      FAT_GetEntryInFAT(cluster);
     }
 
     dirEntry++;
   }
 
+}
+
+uint32_t FAT_FindFile(char* filename) {
+
+  uint8_t buf[512];
+
+  // read first sector of root dir
+  phyCallbacks.phyReadSectors(buf,
+      mountedDisks[0].partitionInfo[0].rootDirSector, 1);
+
+  return 0;
+}
+
+/**
+ * @brief Gets FAT entry for given cluster
+ * @param cluster Cluster number
+ * @return FAT entry for given cluster
+ */
+uint32_t FAT_GetEntryInFAT(uint32_t cluster) {
+
+  // calculate the sector where the FAT entry for the cluster is at
+  // every entry is 4 bytes long
+  uint32_t sector = mountedDisks[0].partitionInfo[0].startFatSector +
+      cluster*4/mountedDisks[0].partitionInfo[0].bytesPerSector;
+
+  println("FAT entry is at sector %d", (unsigned int)sector);
+
+  uint8_t buf[512];
+
+  phyCallbacks.phyReadSectors(buf, sector, 1);
+
+  uint8_t offset = (cluster*4) % mountedDisks[0].partitionInfo[0].bytesPerSector;
+
+  uint32_t* ret = (uint32_t*)(buf+offset);
+
+  println("Fat entry is %08x", (unsigned int)*ret);
+
+  return *ret;
 }
