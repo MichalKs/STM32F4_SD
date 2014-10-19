@@ -47,6 +47,9 @@ typedef struct {
   uint32_t  size;           ///< Number of sectors in partition
 } __attribute((packed)) FAT_PartitionTableEntry;
 
+
+#define FAT_LAST_CLUSTER 0x0fffffff
+
 typedef enum {
   PAR_TYPE_EMPTY = 0x00,
   PAR_TYPE_FAT12 = 0x01,
@@ -164,6 +167,7 @@ typedef struct {
   uint32_t length;          ///< Length of partition in sectors
   uint32_t startFatSector;  ///< Sector where FAT start
   uint32_t rootDirSector;   ///< Sector where root directory starts
+  uint32_t rootDirCluster;  ///< First cluster of root directory
   uint32_t dataStartSector; ///< Sector where data starts
   uint32_t sectorsPerCluster; ///< Number of sectors per cluster
   uint32_t bytesPerSector;    ///< Number of bytes per sector
@@ -197,7 +201,7 @@ static FAT_PhysicalCb phyCallbacks;
 uint32_t FAT_Cluster2Sector(uint32_t cluster);
 void FAT_ListRootDir(void);
 uint32_t FAT_GetEntryInFAT(uint32_t cluster);
-uint32_t FAT_FindFile(char* file);
+uint8_t FAT_FindFile(char* file);
 
 /**
  * @brief Initialize FAT file system
@@ -321,6 +325,7 @@ int8_t FAT_Init(void (*phyInit)(void),
   uint32_t rootCluster = bootSector->rootCluster;
 
   mountedDisks[0].partitionInfo[0].rootDirSector = FAT_Cluster2Sector(rootCluster);
+  mountedDisks[0].partitionInfo[0].rootDirCluster = bootSector->rootCluster;
 
   println("FATs start at sector %d", (unsigned int)fatStart);
 
@@ -403,17 +408,17 @@ void FAT_ListRootDir(void) {
 
     if (!strcmp(filename, "HELLO   TXT")) {
       println("Found file %s!!!!", filename);
-
+      uint8_t buf2[512];
       uint32_t cluster = (((uint32_t)(dirEntry->firstClusterH))<<16) |
           (uint32_t)dirEntry->firstClusterL;
       println("File is at cluster %d", (unsigned int)cluster);
       println("File is at sector %d", (unsigned int)FAT_Cluster2Sector(cluster));
       println("File size is %d",(unsigned int)dirEntry->fileSize);
 
-      phyCallbacks.phyReadSectors(buf, FAT_Cluster2Sector(cluster), 1);
+      phyCallbacks.phyReadSectors(buf2, FAT_Cluster2Sector(cluster), 1);
 
-      hexdump(buf, 512);
-      println("%s",buf);
+      hexdump(buf2, 512);
+      println("%s",buf2);
 
       FAT_GetEntryInFAT(cluster);
     }
@@ -423,31 +428,52 @@ void FAT_ListRootDir(void) {
 
 }
 
-uint32_t FAT_FindFile(char* file) {
+/**
+ * @brief Finds a given file in a directory.
+ * @param file
+ * @return
+ * TODO Search for files also in subdirectories of the root directory.
+ */
+uint8_t FAT_FindFile(char* file) {
 
-  uint8_t buf[512];
+  uint8_t buf[512]; // buffer for sectors
 
   uint32_t i = 0, j = 0, k = 0;
+
   FAT_RootDirEntry* dirEntry = 0;
+  uint32_t currentCluster = mountedDisks[0].partitionInfo[0].rootDirCluster;
+  uint32_t currentSector;
+
   char* ptr;
   char filename[12];
 
   while(1) {
 
-    if (!i%mountedDisks[0].partitionInfo[0].sectorsPerCluster) {
-      // read new cluster of root directory
-    }
-
     if (!i%16) {
 
+      // if whole cluster read - find next cluster
+      if (!i%mountedDisks[0].partitionInfo[0].sectorsPerCluster) {
+        if (i != 0) { // for i == 0 we take first cluster of root dir from boot sector
+          // for other values search the FAT for next cluster
+
+          currentCluster = FAT_GetEntryInFAT(currentCluster);
+          if (currentCluster == FAT_LAST_CLUSTER) {
+            println("Last cluster reached. File not found");
+            return 1;
+          }
+        }
+        j = 0;
+      }
+
+      currentSector = FAT_Cluster2Sector(currentCluster) + j;
       // read new sector every 16 entries
-      phyCallbacks.phyReadSectors(buf,
-          mountedDisks[0].partitionInfo[0].rootDirSector + j, 1);
+      phyCallbacks.phyReadSectors(buf, currentSector, 1);
 
-      println("Read sector %d", mountedDisks[0].partitionInfo[0].rootDirSector + j);
+      println("Read sector %d", (unsigned int) currentSector);
 
-      // first entry in buffer
+      // first entry in buffer for new sector
       dirEntry = (FAT_RootDirEntry*)buf;
+      // go to next sector
       j++;
     }
 
@@ -455,8 +481,8 @@ uint32_t FAT_FindFile(char* file) {
 
     if (dirEntry->filename[0] == 0x00) {
       // last root dir entry
-      println("File not found");
-      break;
+      println("Last entry reached. File not found");
+      return 1;
     }
 
     if (dirEntry->filename[0] == 0xe5) {
@@ -472,12 +498,12 @@ uint32_t FAT_FindFile(char* file) {
     filename[11] = 0;
     if (!strcmp(filename, file)) {
       println("Found file %s!!!!", file);
-      break;
+      return 0;
     }
     dirEntry++;
   }
 
-  return 0;
+  return 1;
 }
 
 /**
