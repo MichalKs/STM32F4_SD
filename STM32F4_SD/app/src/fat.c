@@ -435,30 +435,32 @@ uint8_t FAT_FindFile(FAT_File* file) {
 
     // there are 16 entries per sector
     // Read new sector every 16 entries
-    if ((i%16) == 0) {
+    if ((i&0x0000000f) == 0) {
 
       println("Find file: read new sector");
       // if whole cluster read - find next cluster
-      if ((i%mountedDisks[0].partitionInfo[0].sectorsPerCluster) == 0) {
-        if (i != 0) { // for i == 0 we take first cluster of root dir from boot sector
-          // for other values search the FAT for next cluster
-
-          // new cluster number is in the entry for the current cluster
-          currentCluster = FAT_GetEntryInFAT(currentCluster);
-          // if last cluster then stop
-          if (currentCluster == FAT_LAST_CLUSTER) {
-            println("Last cluster reached. File not found");
-            return 1;
-          }
-        }
-        j = 0; // zero out sector counter at every new cluster
-      }
+//      if ((i%mountedDisks[0].partitionInfo[0].sectorsPerCluster) == 0) {
+//        if (i != 0) { // for i == 0 we take first cluster of root dir from boot sector
+//          // for other values search the FAT for next cluster
+//
+//          // new cluster number is in the entry for the current cluster
+//          currentCluster = FAT_GetEntryInFAT(currentCluster);
+//          // if last cluster then stop
+//          if (currentCluster == FAT_LAST_CLUSTER) {
+//            println("Last cluster reached. File not found");
+//            return 1;
+//          }
+//        }
+//        j = 0; // zero out sector counter at every new cluster
+//      }
 
       // currently read sector is based on the current cluster
       // and the counter j, which updates every 16 entries
       currentSector = FAT_Cluster2Sector(currentCluster) + j;
       // read new sector every 16 entries
       phyCallbacks.phyReadSectors(buf, currentSector, 1);
+
+      TIMER_Delay(1000);
 
       println("Read sector %u", (unsigned int) currentSector);
 
