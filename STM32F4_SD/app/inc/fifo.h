@@ -18,7 +18,7 @@
 #ifndef FIFO_H_
 #define FIFO_H_
 
-#include <stm32f4xx.h>
+#include <inttypes.h>
 
 /**
  * @defgroup  FIFO FIFO

@@ -19,7 +19,7 @@
 #define UART_H_
 
 #include <inttypes.h>
-
+#include <stm32f4xx.h>
 /**
  * @defgroup  USART2 USART2
  * @brief     USART2 low level functions
