@@ -70,32 +70,33 @@ int main(void) {
   uint32_t softTimer = TIMER_GetTime(); // get start time for delay
 
   FAT_Init(SD_Init, SD_ReadSectors, SD_WriteSectors);
-  int hello = FAT_OpenFile("HELLO   TXT");
-  uint8_t data[100];
 
-  FAT_MoveRdPtr(hello, 500);
-
-  int i = FAT_ReadFile(hello, data, 5);
-  i += FAT_ReadFile(hello, data+i, 60);
-  hexdumpC(data, i);
-
-  int hamlet = FAT_OpenFile("HAMLET  TXT");
-
-  FAT_MoveRdPtr(hamlet, 184120);
-
-  i = FAT_ReadFile(hamlet, data, 5);
-  i += FAT_ReadFile(hamlet, data+i, 30);
-  hexdumpC(data, i);
-
-  for (int k = 0; k < 5; k++) {
-    data[k] = 'y';
-  }
-
-  char message[] = "Hello world, from STM32 to FAT driver"; // length 37
-
-  FAT_MoveWrPtr(hello, 500);
-
-  FAT_WriteFile(hello, (uint8_t*)message, strlen(message));
+//  int hello = FAT_OpenFile("HELLO   TXT");
+//  uint8_t data[100];
+//
+//  FAT_MoveRdPtr(hello, 500);
+//
+//  int i = FAT_ReadFile(hello, data, 5);
+//  i += FAT_ReadFile(hello, data+i, 60);
+//  hexdumpC(data, i);
+//
+//  int hamlet = FAT_OpenFile("HAMLET  TXT");
+//
+//  FAT_MoveRdPtr(hamlet, 184120);
+//
+//  i = FAT_ReadFile(hamlet, data, 5);
+//  i += FAT_ReadFile(hamlet, data+i, 30);
+//  hexdumpC(data, i);
+//
+//  for (int k = 0; k < 5; k++) {
+//    data[k] = 'y';
+//  }
+//
+//  char message[] = "Hello world, from STM32 to FAT driver"; // length 37
+//
+//  FAT_MoveWrPtr(hello, 500);
+//
+//  FAT_WriteFile(hello, (uint8_t*)message, strlen(message));
 
 	while (1) {
 
