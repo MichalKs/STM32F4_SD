@@ -65,6 +65,7 @@
  */
 #define SD_ACMD_SEND_OP_COND        41  ///< Activates the card initialization process, sends host capacity.
 #define SD_ACMD_SEND_SCR            51  ///< Reads SD Configuration register
+#define SD_SEND_NUM_WR_BLOCKS       22  ///< Gets number of well written blocks
 
 /*
  * Other SD defines
@@ -94,11 +95,12 @@
 static uint8_t SD_SendCommand(uint8_t cmd, uint32_t args);
 static void SD_GetResponseR3orR7(uint8_t* buf);
 
-#define SD_HAL_Init SPI1_Init
-#define SD_HAL_SelectCard SPI1_Select
+#define SD_HAL_Init         SPI1_Init
+#define SD_HAL_SelectCard   SPI1_Select
 #define SD_HAL_DeselectCard SPI1_Deselect
 #define SD_HAL_TransmitData SPI1_Transmit
-#define SD_HAL_ReadBuffer SPI1_ReadBuffer
+#define SD_HAL_ReadBuffer   SPI1_ReadBuffer
+#define SD_HAL_WriteBuffer  SPI1_WriteBuffer
 
 static uint8_t isSDHC; ///< Is the card SDHC?
 
@@ -243,11 +245,11 @@ void SD_Init(void) {
   }
 
   // Send OCR to terminal
-  print("OCR value: ");
-  for (i=0; i<4; i++) {
-    print("%02x ", buf[i]);
-  }
-  print("\r\n");
+//  print("OCR value: ");
+//  for (i=0; i<4; i++) {
+//    print("%02x ", buf[i]);
+//  }
+//  print("\r\n");
 
   // Send ACMD41 until card goes out of IDLE state
   for (i=0; i<10; i++) {
@@ -277,11 +279,11 @@ void SD_Init(void) {
   }
 
   // Send OCR to terminal
-  print("OCR value: ");
-  for (i=0; i<4; i++) {
-    print("%02x ", buf[i]);
-  }
-  print("\r\n");
+//  print("OCR value: ");
+//  for (i=0; i<4; i++) {
+//    print("%02x ", buf[i]);
+//  }
+//  print("\r\n");
 
   // check capacity
   if (buf[0] & 0x40) {
@@ -296,11 +298,12 @@ void SD_Init(void) {
 
 }
 /**
- *
- * @param buf
- * @param sector
- * @param count
- * @return
+ * @brief Read sectors from SD card
+ * @param buf Data buffer
+ * @param sector Start sector
+ * @param count Number of sectors to write
+ * @retval 0 Read was successful
+ * @retval 1 Error occurred
  */
 uint8_t SD_ReadSectors(uint8_t* buf, uint32_t sector, uint32_t count) {
 
@@ -317,6 +320,8 @@ uint8_t SD_ReadSectors(uint8_t* buf, uint32_t sector, uint32_t count) {
 
   if (resp.responseR1 != 0x00) {
     println("SD_READ_MULTIPLE_BLOCK error");
+    SD_HAL_DeselectCard();
+    return 1;
   }
 
   while (count) {
@@ -337,35 +342,50 @@ uint8_t SD_ReadSectors(uint8_t* buf, uint32_t sector, uint32_t count) {
 
   return 0;
 }
-
+/**
+ * @brief Write sectors to SD card
+ * @param buf Data buffer
+ * @param sector First sector to write
+ * @param count Number of sectors to write
+ * @retval 0 Read was successful
+ * @retval 1 Error occurred
+ */
 uint8_t SD_WriteSectors(uint8_t* buf, uint32_t sector, uint32_t count) {
 
+  SD_ResponseR1 resp;
 
-  sector *= 512;
+  // SDSC cards use byte addressing, SDHC use block addressing
+  if (!isSDHC) {
+    sector *= 512;
+  }
 
   SD_HAL_SelectCard();
 
-  uint8_t status;
+  resp.responseR1 = SD_SendCommand(SD_WRITE_MULTIPLE_BLOCK, sector);
 
-  do {
-    status = SD_SendCommand(SD_WRITE_MULTIPLE_BLOCK, sector);
-    TIMER_Delay(5);
-  } while (status != 0);
-
-  SD_HAL_TransmitData(0xff);
+  if (resp.responseR1 != 0x00) {
+    println("SD_WRITE_MULTIPLE_BLOCK error");
+    SD_HAL_DeselectCard();
+    return 1;
+  }
 
   while (count) {
-    SD_HAL_TransmitData(0xfc); // send data token
-    SD_HAL_ReadBuffer(buf, 512);
+    SD_HAL_TransmitData(0xfc); // send start block token
+    SD_HAL_WriteBuffer(buf, 512);
     SD_HAL_TransmitData(0xff);
     SD_HAL_TransmitData(0xff); // two bytes CRC
     count--;
     buf += 512; // move buffer pointer forward
+
+    // data response
+    SD_HAL_TransmitData(0xff);
+
+    while(!SD_HAL_TransmitData(0xff)); // wait while card is busy
   }
 
-  SD_HAL_TransmitData(0xfd); // stop transmission
+  SD_HAL_TransmitData(0xfd); // stop transmission token
   SD_HAL_TransmitData(0xff);
-  while(!SD_HAL_TransmitData(0xff));
+  while(!SD_HAL_TransmitData(0xff)); // wait while card is busy
 
   SD_HAL_DeselectCard();
 
@@ -405,7 +425,7 @@ static uint8_t SD_SendCommand(uint8_t cmd, uint32_t args) {
   // So, we send a dummy byte first.
   SD_HAL_TransmitData(0xff);
   uint8_t ret = SD_HAL_TransmitData(0xff);
-  println("Response to cmd %d is %02x", cmd, ret);
+//  println("Response to cmd %d is %02x", cmd, ret);
 
   return ret;
 }

@@ -16,6 +16,7 @@
  */
 
 #include <spi1.h>
+#include <stm32f4xx.h>
 
 /**
  * @addtogroup SPI1
@@ -26,7 +27,6 @@
  * @brief Initialize SPI1 and SS pin.
  */
 void SPI1_Init(void) {
-
   // Enable GPIO clock for SPI pins
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 
@@ -35,6 +35,7 @@ void SPI1_Init(void) {
    * PA5 = SCK
    * PA6 = MISO
    * PA7 = MOSI
+   * PA4 = SS
    */
   GPIO_InitTypeDef GPIO_InitStruct;
   GPIO_InitStruct.GPIO_Pin    = GPIO_Pin_7 | GPIO_Pin_6 | GPIO_Pin_5;
@@ -138,6 +139,18 @@ void SPI1_ReadBuffer(uint8_t* buf, uint32_t len) {
 
   while (len--) {
     *buf++ = SPI1_Transmit(0xff);
+  }
+}
+/**
+ * @brief Write multiple data on SPI1.
+ * @param buf Buffer with write data.
+ * @param len Number of bytes to write.
+ * @warning Blocking function!
+ */
+void SPI1_WriteBuffer(uint8_t* buf, uint32_t len) {
+
+  while (len--) {
+    SPI1_Transmit(*buf++);
   }
 }
 /**
