@@ -463,7 +463,7 @@ int FAT_OpenFile(const char* filename) {
 
   FAT_File file;
   strcpy(file.filename, filename);
-  println("Opening file %s", filename);
+  println("%s: Opening file %s", __FUNCTION__, filename);
 
   int id = FAT_FindFile(&file);
 
@@ -483,7 +483,7 @@ int FAT_OpenFile(const char* filename) {
 int FAT_NewFile(const char* filename) {
   FAT_File file;
   strcpy(file.filename, filename);
-  println("Opening file %s", filename);
+  println("%s: Opening file %s", __FUNCTION__, filename);
 
   int id = FAT_FindFile(&file);
 
@@ -534,7 +534,7 @@ int FAT_MoveRdPtr(int file, int newWrPtr) {
 
   // Can't move beyond length of file for read
   if (newWrPtr > openedFiles[file].fileSize) {
-    println("EOF reached");
+    println("%s: EOF reached", __FUNCTION__);
     return -1;
   }
 
@@ -581,7 +581,7 @@ int FAT_MoveWrPtr(int file, int newWrPtr) {
  */
 int FAT_ReadFile(int file, uint8_t* data, int count) {
 
-  println("Read file function");
+  println("%s", __FUNCTION__);
 
   // if incorrect file ID
   if (file >= MAX_OPENED_FILES) {
@@ -628,7 +628,7 @@ int FAT_ReadFile(int file, uint8_t* data, int count) {
   // start getting data from read pointer (in the current sector)
   uint8_t* ptr = buf + openedFiles[file].rdPtr % 512;
 
-  println("Read file - reading data");
+  println("%s: reading data", __FUNCTION__);
   for (int i = 0; i < count; i++) {
 
     data[i] = *ptr++;
@@ -636,12 +636,12 @@ int FAT_ReadFile(int file, uint8_t* data, int count) {
     len++;
     // check if EOF reached
     if (openedFiles[file].rdPtr >= openedFiles[file].fileSize) {
-      println("EOF reached");
+      println("%s: EOF reached", __FUNCTION__);
       break;
     }
     // if sector boundary reached
     if (openedFiles[file].rdPtr % 512 == 0) {
-      println("Read file: read new sector");
+      println("%s: read new sector", __FUNCTION__);
       // increment sector counter
       sectorOffset++;
       // which sector in cluster is it
@@ -650,7 +650,7 @@ int FAT_ReadFile(int file, uint8_t* data, int count) {
 
       // if first sector, then read new cluster
       if (sectorOffset == 0) {
-        println("Read file: jump to next cluster");
+        println("%s: jump to next cluster", __FUNCTION__);
         // change cluster to next
         FAT_GetCluster(baseCluster, 1, &baseCluster);
       }
@@ -674,7 +674,7 @@ int FAT_ReadFile(int file, uint8_t* data, int count) {
  */
 int FAT_WriteFile(int file, const uint8_t* data, int count) {
 
-  println("Write file function");
+  println("%s", __FUNCTION__);
 
   // if incorrect file ID
   if (file >= MAX_OPENED_FILES) {
@@ -690,7 +690,7 @@ int FAT_WriteFile(int file, const uint8_t* data, int count) {
   // We have already reached EOF
   // TODO Make this cross EOF - adding more data - change file size in root dir
   if (openedFiles[file].wrPtr >= openedFiles[file].fileSize) {
-    println("EOF reached");
+    println("%s: EOF reached", __FUNCTION__);
 
     // TODO Zero out the bytes between wrPtr and filesize
     // TODO If new cluster we need to add cluster info in FAT
@@ -724,7 +724,7 @@ int FAT_WriteFile(int file, const uint8_t* data, int count) {
   // start writing data from write pointer (in the current sector)
   uint8_t* ptr = buf + openedFiles[file].wrPtr % 512;
 
-  println("Write file - writing data");
+  println("%s: writing data", __FUNCTION__);
   for (int i = 0; i < count; i++) {
 
     *ptr++ = data[i];
@@ -733,7 +733,7 @@ int FAT_WriteFile(int file, const uint8_t* data, int count) {
 
     // if sector boundary reached
     if (openedFiles[file].wrPtr % 512 == 0) {
-      println("Write file: new sector");
+      println("%s: new sector", __FUNCTION__);
       FAT_WriteSector(baseSector); // save data
 //      FAT_UpdateRootEntry(file);
       // increment sector counter
@@ -744,7 +744,7 @@ int FAT_WriteFile(int file, const uint8_t* data, int count) {
 
       // if first sector, then read new cluster
       if (sectorOffset == 0) {
-        println("Write file: jump to next cluster");
+        println("%s: jump to next cluster", __FUNCTION__);
 
         if (openedFiles[file].wrPtr >= openedFiles[file].fileSize) {
           // TODO If new cluster then update FAT
@@ -796,14 +796,15 @@ static void FAT_UpdateRootEntry(int file) {
   // read sector where entry is at
 
   FAT_ReadSector(sector);
-  println("Read sector %u", (unsigned int)sector);
+  println("%s: Read sector %u", __FUNCTION__, (unsigned int)sector);
 
   // point to entry in the current sector
 //  uint8_t* ptr = buf;
 //  ptr += (openedFiles[file].rootDirEntry * sizeof(FAT_RootDirEntry)) % 512;
 
   FAT_RootDirEntry* dirEntry = (FAT_RootDirEntry*) buf;
-  println("Dir entry %u", (unsigned int)openedFiles[file].rootDirEntry);
+  println("%s: Dir entry %u", __FUNCTION__,
+      (unsigned int)openedFiles[file].rootDirEntry);
   dirEntry += openedFiles[file].rootDirEntry;
 
   char filename[12];
@@ -815,7 +816,7 @@ static void FAT_UpdateRootEntry(int file) {
   filename[11] = 0; // end string
   dirEntry->fileSize = openedFiles[file].fileSize;
 
-  println("Updating root entry for file: %s, size %u",
+  println("%s: Updating root entry for file: %s, size %u", __FUNCTION__,
       filename, (unsigned int)openedFiles[file].fileSize);
 
   FAT_WriteSector(sector);
@@ -882,7 +883,7 @@ static uint32_t FAT_GetEntryInFAT(uint32_t cluster) {
   uint32_t sector = mountedDisks[0].partitionInfo[0].startFatSector +
       cluster*4/mountedDisks[0].partitionInfo[0].bytesPerSector;
 
-  println("FAT entry is at sector %d", (unsigned int)sector);
+  println("%s: FAT entry is at sector %d", __FUNCTION__, (unsigned int)sector);
 
 //  uint8_t buf[512]; // buffer for sector data
 
@@ -897,7 +898,7 @@ static uint32_t FAT_GetEntryInFAT(uint32_t cluster) {
   // the 4-byte entry is at offset
   uint32_t* ret = (uint32_t*)(buf+offset);
 
-  println("Fat entry is %08x", (unsigned int)*ret);
+  println("%s: Fat entry is %08x", __FUNCTION__, (unsigned int)*ret);
 
   return *ret;
 }
@@ -910,7 +911,7 @@ static uint32_t FAT_GetEntryInFAT(uint32_t cluster) {
  */
 static int FAT_FindFile(FAT_File* file) {
 
-  println("Searching for file %s", file->filename);
+  println("%s: Searching for file %s", __FUNCTION__, file->filename);
 
   uint32_t i = 0, j = 0, k = 0;
 
@@ -929,7 +930,7 @@ static int FAT_FindFile(FAT_File* file) {
     // there are 16 entries per sector
     // Read new sector every 16 entries
     if ((i%16) == 0) {
-      println("Find file: read new sector");
+      println("%s: read new sector", __FUNCTION__);
       // TODO Also change cluster
       // if whole cluster read - find next cluster
 //      if ((i%mountedDisks[0].partitionInfo[0].sectorsPerCluster) == 0) {
@@ -967,7 +968,7 @@ static int FAT_FindFile(FAT_File* file) {
 
     if (dirEntry->filename[0] == 0x00) {
       // last root dir entry
-      println("Last entry reached. File not found");
+      println("%s: Last entry reached. File not found", __FUNCTION__);
       return -1;
     }
 
@@ -1000,7 +1001,8 @@ static int FAT_FindFile(FAT_File* file) {
       file->lastModifiedDate = dirEntry->lastModifiedDate;
       file->id = FAT_GetNextId();
       file->rootDirEntry = i-1;
-      println("File root dir entry = %u", (unsigned int)file->rootDirEntry);
+      println("%s, File root dir entry = %u", __FUNCTION__,
+          (unsigned int)file->rootDirEntry);
 
       FAT_DateFormat date;
       date.date = file->lastModifiedDate;
@@ -1011,11 +1013,11 @@ static int FAT_FindFile(FAT_File* file) {
       file->rdPtr = 0; // start reading from 1st byte
       file->wrPtr = 0; // start writing from 1st byte
 
-      println("Found file %s of size %u, ID = %u!!!",
-          file->filename, (unsigned int)file->fileSize,
+      println("%s: Found file %s of size %u, ID = %u!!!",
+          __FUNCTION__, file->filename, (unsigned int)file->fileSize,
           (unsigned int)file->id);
-      println("File created on %02u.%02u.%04u at %02u:%02u:%02u",
-          date.fields.day,date.fields.month, date.fields.year+1980,
+      println("%s: File created on %02u.%02u.%04u at %02u:%02u:%02u",
+          __FUNCTION__, date.fields.day,date.fields.month, date.fields.year+1980,
           time.fields.hours, time.fields.minutes, time.fields.seconds*2);
 
       FAT_LongDirEntry *longEntry = (FAT_LongDirEntry *)(dirEntry - 1);
@@ -1034,7 +1036,7 @@ static int FAT_FindFile(FAT_File* file) {
         *namePtr++ = longEntry->name3[i];
       }
       *namePtr = 0;
-      println("Long file name");
+      println("%s: Long file name", __FUNCTION__);
       hexdump16C(longFilename, 14);
 
       return file->id;
