@@ -2,7 +2,7 @@
  * @file    timer14.h
  * @brief   TIMER14 control
  * @date    10 paź 2014
- * @author Michal Ksiezopolski
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.

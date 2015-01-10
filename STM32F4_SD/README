@@ -1,8 +1,8 @@
 
 To run this example on a STM32F407 microcontroller:
 
-1) connect PA2 (UART TX pin) to a UART-USB converter and open a 
-serial port terminal (for example, GTK Term). Params: 9600 8n1.
+1) connect PA2 (USART TX pin) to a UART-USB converter and open a 
+serial port terminal (for example, GTK Term). Params: 115200 8n1.
 
 2) Connect SD Card:
    * PA5 = SCK

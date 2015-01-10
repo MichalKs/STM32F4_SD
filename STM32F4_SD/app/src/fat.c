@@ -557,7 +557,7 @@ int FAT_MoveWrPtr(int file, int newWrPtr) {
 }
 /**
  * @brief Reads contents of file.
- * @param id ID of opened file
+ * @param file ID of opened file
  * @param data Buffer for storing data
  * @param count Number of bytes to read
  * @return Number of bytes read or -1 for EOF
