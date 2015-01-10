@@ -365,7 +365,7 @@ int8_t FAT_Init(void (*phyInit)(void),
         println("FAT32 partition found");
       }
       println("Partition %d start sector is: %u", i, (unsigned int)mbr->partitionTable[i].partitionLBA);
-      println("Partition %d size is: %u", i, (unsigned int)mbr->partitionTable[i].size);
+      println("Partition %d size is: %u", i, (unsigned int)mbr->partitionTable[i].size*512);
 
       mountedDisks[0].partitionInfo[i].partitionNumber = i;
       mountedDisks[0].partitionInfo[i].type = mbr->partitionTable[i].type;

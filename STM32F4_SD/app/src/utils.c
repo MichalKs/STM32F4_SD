@@ -26,6 +26,41 @@
  */
 
 /**
+ * @brief Function determines byte order of given architecture.
+ * @retval 1 Architecture is big endian.
+ * @retval 0 Architecture is little endian.
+ */
+uint8_t isBigEndian(void) {
+  const int i = 1;
+  return (*(char*)&i) == 0;
+}
+
+/**
+ * @brief Converts big endian long value to host endianness.
+ * @param val Value to convert
+ * @return Converted value
+ */
+uint32_t ntohl(uint32_t val) {
+
+  // if we're on big endian arch
+  // then do nothing
+  if (isBigEndian()) {
+    return val;
+  }
+
+  // else convert to little endian
+  uint32_t tmp = 0;
+  uint8_t* tmpPtr = (uint8_t*)&tmp;
+  uint8_t* valPtr = (uint8_t*)&val;
+
+  for (int i = 0; i < 4; i++) {
+    tmpPtr[i] = valPtr[3-i];
+  }
+
+  return tmp;
+}
+
+/**
  * @brief Send data in hex format to terminal.
  * @param buf Data buffer.
  * @param length Number of bytes to send.

@@ -101,6 +101,7 @@
 #define SD_HAL_WriteBuffer  SPI1_WriteBuffer
 
 static uint8_t isSDHC; ///< Is the card SDHC?
+static uint64_t cardCapacity;
 
 /**
  * @brief SD Card R1 response structure
@@ -196,47 +197,10 @@ typedef struct {
  * @brief
  * @details The data comes MSB first. In C in a bit array corresponds
  * to the least significant bit.
- * FIXME This is a mess.
  */
 typedef struct {
 
-  // first uint32_t
-  struct {
-    uint32_t maxDataRate :8;
-    uint32_t dataRdCycles:8;
-    uint32_t dataRdTime :8;
-    uint32_t reserved7 :6;
-    uint32_t csdType :2;
-  } bits4;
-
-  // second uint32_t
-  struct {
-    uint32_t deviceSize2 :6;
-    uint32_t reserved6 : 6;
-    uint32_t DSR :1;
-    uint32_t rdBlkMisalign :1;
-    uint32_t wrtBlkMisalign :1;
-    uint32_t rdBlkPartial :1;
-
-    uint32_t maxReadLen :4;
-    uint32_t cardCommandClass :12;
-  } bits3;
-
-  // third uint32_t
-  struct {
-
-
-    uint32_t wrtProtectSize :7;
-    uint32_t sectorSize :7;
-    uint32_t eraseSingleBlkEna :1;
-    uint32_t reserved5 :1;
-
-    uint32_t deviceSize1 :16;
-  } bits2;
-
   // fourth uint32_t
-  struct {
-
     uint32_t reserved1   :1;
     uint32_t crc :7;
     uint32_t reserved2 :2;
@@ -252,7 +216,31 @@ typedef struct {
     uint32_t wrtSpeed :3;
     uint32_t reserved4 :2;
     uint32_t wrtProtectEna :1;
-  } bits1;
+  // third uint32_t
+    uint32_t wrtProtectSize :7;
+    uint32_t sectorSize :7;
+    uint32_t eraseSingleBlkEna :1;
+    uint32_t reserved5 :1;
+    uint32_t deviceSize :22;
+//    uint32_t deviceSize1 :16;
+
+  // second uint32_t
+//    uint32_t deviceSize2 :6;
+    uint32_t reserved6 : 6;
+    uint32_t DSR :1;
+    uint32_t rdBlkMisalign :1;
+    uint32_t wrtBlkMisalign :1;
+    uint32_t rdBlkPartial :1;
+
+    uint32_t maxReadLen :4;
+    uint32_t cardCommandClass :12;
+
+  // first uint32_t
+    uint32_t maxDataRate :8;
+    uint32_t dataRdCycles:8;
+    uint32_t dataRdTime :8;
+    uint32_t reserved7 :6;
+    uint32_t csdType :2;
 
 } __attribute((packed)) SD_CSD;
 
@@ -363,7 +351,6 @@ void SD_Init(void) {
     println("SDSC card connected");
     isSDHC = 0;
   }
-  while(1);
 
   SD_HAL_DeselectCard();
 
@@ -483,10 +470,10 @@ static SD_ResponseR1 SD_ReadOCR(SD_OCR* ocr) {
 
   // SD sends this commands MSB first
   // so reverse byte order
-  uint8_t* ptr = (uint8_t*)ocr;
-  for (int i = 0; i < 4; i++) {
-    ptr[i] = tmp [3-i];
-  }
+  uint32_t* ptr = (uint32_t*)ocr;
+  uint32_t* ptrBuf = (uint32_t*)tmp;
+
+  *ptr = ntohl(*ptrBuf); // convert to little endian if necessary
 
   // Send OCR to terminal
   print("OCR value: ");
@@ -558,19 +545,20 @@ static void SD_ReadCSD(SD_CSD* csd) {
   uint32_t* ptrBuf = (uint32_t*)buf;
 
   for (int i = 0; i < 4; i++) {
-    ptr[i] = ptrBuf[i];
+    ptr[i] = ntohl(ptrBuf[3-i]); // convert to little endian if necessary
   }
 
   hexdumpC(buf, 16);
 
-  println("CSD: 0x%08x", (unsigned int) *(uint32_t*)&csd->bits1);
-  println("CSD: 0x%08x", (unsigned int) *(uint32_t*)&csd->bits2);
-  println("CSD: 0x%08x", (unsigned int) *(uint32_t*)&csd->bits3);
-  println("CSD: 0x%08x", (unsigned int) *(uint32_t*)&csd->bits4);
+  println("CSD: 0x%02x", (unsigned int) csd->csdType);
+  println("CSD: 0x%02x", (unsigned int) csd->dataRdTime);
+  println("CSD: 0x%02x", (unsigned int) csd->crc << 1);
+  println("CSD: %u", (unsigned int) csd->deviceSize);
 
-  println("CSD: 0x%02x", (unsigned int) csd->bits4.csdType);
-  println("CSD: 0x%02x", (unsigned int) csd->bits4.dataRdTime);
-  println("CSD: 0x%02x", (unsigned int) csd->bits1.crc << 1);
+  // size counted in blocks of 512
+  cardCapacity = csd->deviceSize * 512 * 1024;
+  println("Card capacity: %u", (unsigned int)cardCapacity);
+
   // R1b response - check busy flag
   while(!SD_HAL_TransmitData(0xff));
 
