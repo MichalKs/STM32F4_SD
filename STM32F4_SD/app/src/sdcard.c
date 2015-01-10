@@ -101,7 +101,7 @@
 #define SD_HAL_WriteBuffer  SPI1_WriteBuffer
 
 static uint8_t isSDHC; ///< Is the card SDHC?
-static uint64_t cardCapacity;
+static uint64_t cardCapacity; ///< Capacity of SD card in bytes
 
 /**
  * @brief SD Card R1 response structure
@@ -152,7 +152,6 @@ typedef union {
   uint16_t responseR2; ///< R1 response fields as byte
 
 } SD_ResponseR2;
-
 /**
  * @brief Operation conditions register
  */
@@ -192,11 +191,12 @@ typedef struct {
   uint8_t crc;
 
 } __attribute((packed)) SD_CID;
-
 /**
- * @brief
+ * @brief Card specific data register
  * @details The data comes MSB first. In C in a bit array corresponds
  * to the least significant bit.
+ *
+ * TODO Add version of this register for SDSC cards
  */
 typedef struct {
 
@@ -216,12 +216,13 @@ typedef struct {
     uint32_t wrtSpeed :3;
     uint32_t reserved4 :2;
     uint32_t wrtProtectEna :1;
+
   // third uint32_t
     uint32_t wrtProtectSize :7;
     uint32_t sectorSize :7;
     uint32_t eraseSingleBlkEna :1;
     uint32_t reserved5 :1;
-    uint32_t deviceSize :22;
+    uint32_t deviceSize :22; ///< Capacity of the card
 //    uint32_t deviceSize1 :16;
 
   // second uint32_t
@@ -240,7 +241,7 @@ typedef struct {
     uint32_t dataRdCycles:8;
     uint32_t dataRdTime :8;
     uint32_t reserved7 :6;
-    uint32_t csdType :2;
+    uint32_t csdType :2;  ///< Type of the structure
 
 } __attribute((packed)) SD_CSD;
 
@@ -330,9 +331,10 @@ void SD_Init(void) {
     }
   }
 
+  // read CID
   SD_CID cid;
   SD_ReadCID(&cid);
-
+  // read CSD to get card capacity
   SD_CSD csd;
   SD_ReadCSD(&csd);
 
@@ -354,6 +356,14 @@ void SD_Init(void) {
 
   SD_HAL_DeselectCard();
 
+}
+/**
+ * @brief Gets the capacity of the card.
+ * @return Card capacity in bytes.
+ */
+uint64_t SD_ReadCapacity(void) {
+
+  return cardCapacity;
 }
 /**
  * @brief Read sectors from SD card
@@ -520,6 +530,10 @@ static void SD_ReadCID(SD_CID* cid) {
 }
 /**
  * @brief Read CSD register of SD card
+ *
+ * @details This function also sets the cardCapacity
+ * variable holding the capacity of the card in bytes.
+ *
  * @param csd Structure for filling CSD register.
  */
 static void SD_ReadCSD(SD_CSD* csd) {
@@ -550,13 +564,13 @@ static void SD_ReadCSD(SD_CSD* csd) {
 
   hexdumpC(buf, 16);
 
-  println("CSD: 0x%02x", (unsigned int) csd->csdType);
-  println("CSD: 0x%02x", (unsigned int) csd->dataRdTime);
-  println("CSD: 0x%02x", (unsigned int) csd->crc << 1);
-  println("CSD: %u", (unsigned int) csd->deviceSize);
+  println("CSD type: 0x%02x", (unsigned int) csd->csdType);
+  println("CSD device size: %u", (unsigned int) csd->deviceSize);
 
-  // size counted in blocks of 512
+  // size counted in blocks of 512K
   cardCapacity = csd->deviceSize * 512 * 1024;
+  // the newlib implementation of printf seems to have problems
+  // with %llu format
   println("Card capacity: %u", (unsigned int)cardCapacity);
 
   // R1b response - check busy flag
@@ -601,7 +615,6 @@ static uint8_t SD_SendCommand(uint8_t cmd, uint32_t args) {
 
   return ret;
 }
-
 /**
  * @brief Get R3 or R7 response from card
  *
