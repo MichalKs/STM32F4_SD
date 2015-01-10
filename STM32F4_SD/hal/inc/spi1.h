@@ -1,8 +1,8 @@
 /**
- * @file:   spi1.h
- * @brief:  SPI control functions
- * @date:   22 kwi 2014
- * @author: Michal Ksiezopolski
+ * @file    spi1.h
+ * @brief   SPI control functions
+ * @date    22 kwi 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.

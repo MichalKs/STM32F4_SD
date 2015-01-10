@@ -1,8 +1,8 @@
 /**
- * @file:   uart2.c
- * @brief:  Controlling UART
- * @date:   12 kwi 2014
- * @author: Michal Ksiezopolski
+ * @file    uart2.c
+ * @brief   Controlling USART2
+ * @date    12 kwi 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.

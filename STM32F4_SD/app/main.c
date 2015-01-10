@@ -1,8 +1,8 @@
 /**
- * @file:   main.c
- * @brief:  LED test
- * @date:   9 kwi 2014
- * @author: Michal Ksiezopolski
+ * @file    main.c
+ * @brief   LED test
+ * @date    9 kwi 2014
+ * @author  Michal Ksiezopolski
  *
  *
  * @verbatim

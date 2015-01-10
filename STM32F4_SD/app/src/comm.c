@@ -1,8 +1,8 @@
 /**
- * @file: 	comm.c
- * @brief:	Communication with PC functions.
- * @date: 	25 sie 2014
- * @author: Michal Ksiezopolski
+ * @file    comm.c
+ * @brief   Communication with PC functions.
+ * @date    25 sie 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -32,11 +32,6 @@
   #define print(str, args...) (void)0
   #define println(str, args...) (void)0
 #endif
-
-/**
- * @defgroup  COMM COMM
- * @brief     Communication with PC functions.
- */
 
 /**
  * @addtogroup COMM
@@ -80,7 +75,6 @@ void COMM_Init(uint32_t baud) {
   FIFO_Add(&txFifo);
 
 }
-
 /**
  * @brief Send a char to USART2.
  * @details This function can be called in stubs.c _write

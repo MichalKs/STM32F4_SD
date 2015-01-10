@@ -1,8 +1,8 @@
 /**
- * @file:   uart2.h
- * @brief:  Controlling UART
- * @date:   12 kwi 2014
- * @author: Michal Ksiezopolski
+ * @file    uart2.h
+ * @brief   Controlling USART2
+ * @date    12 kwi 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -20,6 +20,7 @@
 
 #include <inttypes.h>
 #include <stm32f4xx.h>
+
 /**
  * @defgroup  USART2 USART2
  * @brief     USART2 low level functions

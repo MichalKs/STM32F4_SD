@@ -1,8 +1,8 @@
 /**
- * @file: 	timer14.c
- * @brief:	   
- * @date: 	10 paź 2014
- * @author: Michal Ksiezopolski
+ * @file    timer14.c
+ * @brief   TIMER14 control
+ * @date    10 paź 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -17,6 +17,11 @@
 
 #include <stm32f4xx.h>
 #include <timer14.h>
+
+/**
+ * @addtogroup TIMER14
+ * @{
+ */
 
 static volatile uint32_t usCount; ///< Microsecond counter
 
@@ -69,4 +74,6 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) {
   }
 }
 
-
+/**
+ * @}
+ */

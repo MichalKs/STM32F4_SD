@@ -1,8 +1,8 @@
 /**
- * @file:   assert.c
- * @brief:  Functions for assertion checking
- * @date:   9 kwi 2014
- * @author: Michal Ksiezopolski
+ * @file    assert.c
+ * @brief   Functions for assertion checking
+ * @date    9 kwi 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.

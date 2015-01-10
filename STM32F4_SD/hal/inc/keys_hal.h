@@ -1,8 +1,8 @@
 /**
- * @file: 	keys_hal.h
- * @brief:	   
- * @date: 	6 paź 2014
- * @author: Michal Ksiezopolski
+ * @file    keys_hal.h
+ * @brief   Matrix keyboard low level functions
+ * @date    6 paź 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -20,8 +20,22 @@
 
 #include <inttypes.h>
 
+/**
+ * @defgroup  KEYS_HAL KEYS_HAL
+ * @brief     Matrix keyboard low level functions
+ */
+
+/**
+ * @addtogroup KEYS_HAL
+ * @{
+ */
+
 int8_t KEYS_HAL_ReadRow(void);
 void KEYS_HAL_SelectColumn(uint8_t col);
 void KEYS_HAL_Init(void);
+
+/**
+ * @}
+ */
 
 #endif /* KEYS_HAL_H_ */

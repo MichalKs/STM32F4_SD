@@ -1,8 +1,8 @@
 /**
- * @file: 	led_hal.h
- * @brief:	HAL for using LEDs
- * @date: 	25 sie 2014
- * @author: Michal Ksiezopolski
+ * @file    led_hal.h
+ * @brief   HAL for using LEDs
+ * @date    25 sie 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -19,7 +19,6 @@
 #define LED_HAL_H_
 
 #include <inttypes.h>
-
 
 /**
  * @defgroup  LED_HAL LED_HAL

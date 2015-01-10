@@ -1,8 +1,8 @@
 /**
- * @file: 	utils.h
- * @brief:	Common macros and functions
- * @date: 	20 lip 2014
- * @author: Michal Ksiezopolski
+ * @file    utils.h
+ * @brief   Utility and help functions.
+ * @date    20 lip 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.

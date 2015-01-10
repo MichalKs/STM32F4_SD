@@ -1,8 +1,8 @@
 /**
- * @file:   sdcard.c
- * @brief:  SD card control functions.
- * @date:   22 kwi 2014
- * @author: Michal Ksiezopolski
+ * @file    sdcard.c
+ * @brief   SD card control functions.
+ * @date    22 kwi 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.

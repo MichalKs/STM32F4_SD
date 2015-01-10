@@ -1,8 +1,8 @@
 /**
- * @file:   fifo.h
- * @brief:  First in first out buffer implementation
- * @date:   12 kwi 2014
- * @author: Michal Ksiezopolski
+ * @file    fifo.h
+ * @brief   First in first out buffer implementation
+ * @date    12 kwi 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.

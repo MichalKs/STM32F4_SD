@@ -1,8 +1,8 @@
 /**
- * @file: 	systick.c
- * @brief:	Managing the SysTick
- * @date: 	25 sie 2014
- * @author: Michal Ksiezopolski
+ * @file    systick.c
+ * @brief   Managing the SysTick
+ * @date    25 sie 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.

@@ -1,8 +1,8 @@
 /**
- * @file: 	stubs.c
- * @brief:	Newlib stubs necessary for using printf.
- * @date: 	12 kwi 2014
- * @author: Michal Ksiezopolski
+ * @file    stubs.c
+ * @brief   Newlib stubs necessary for using printf.
+ * @date    12 kwi 2014
+ * @author  Michal Ksiezopolski
  * 
  * This is the file, which enables redirecting printf
  * to a chosen USART.
@@ -20,6 +20,16 @@
 
 
 #include <comm.h>
+
+/**
+ * @defgroup  STUBS STUBS
+ * @brief     Newlib stubs
+ */
+
+/**
+ * @addtogroup STUBS
+ * @{
+ */
 
 /*
  * These stubs should be expanded!!!
@@ -51,7 +61,7 @@ void _fstat() {
  */
 int _read(int fileHandle, char *buf, int len) {
 
-	return 0;
+  return 0;
 }
 
 /**
@@ -64,10 +74,14 @@ int _read(int fileHandle, char *buf, int len) {
  */
 int _write(int fileHandle, char *buf, int len) {
 
-	int i;
-	for (i=0; i<len; i++) {
-		COMM_Putc((uint8_t)buf[i]);
-	}
+  int i;
+  for (i=0; i<len; i++) {
+    COMM_Putc((uint8_t)buf[i]);
+  }
 
-	return len;
+  return len;
 }
+
+/**
+ * @}
+ */

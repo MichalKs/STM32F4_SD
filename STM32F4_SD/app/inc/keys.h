@@ -1,8 +1,8 @@
 /**
- * @file: 	keys.h
- * @brief:	   
- * @date: 	5 maj 2014
- * @author: Michal Ksiezopolski
+ * @file    keys.h
+ * @brief   Matrix keyboard library
+ * @date    5 maj 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -20,23 +20,40 @@
 
 #include <inttypes.h>
 
+/**
+ * @defgroup  KEYS KEYS
+ * @brief     Matrix keyboard library
+ */
+
+/**
+ * @addtogroup KEYS
+ * @{
+ */
 typedef enum {
-  KEY0,
-  KEY1,
-  KEY2,
-  KEY3,
-  KEY4,
-  KEY5,
-  KEY6,
-  KEY7,
-  KEY8,
-  KEY9,
-  KEY_HASH,
-  KEY_ASTERISK,
+  KEY0 = 0x31,
+  KEY1 = 0x00,
+  KEY2 = 0x01,
+  KEY3 = 0x02,
+  KEY4 = 0x10,
+  KEY5 = 0x11,
+  KEY6 = 0x12,
+  KEY7 = 0x20,
+  KEY8 = 0x21,
+  KEY9 = 0x22,
+  KEYA = 0x03,
+  KEYB = 0x13,
+  KEYC = 0x23,
+  KEYD = 0x33,
+  KEY_HASH = 0x32,
+  KEY_ASTERISK = 0x30,
   KEY_NONE = 0xff
 } KEY_Id_Typedef;
 
 void KEYS_Init(void);
 uint8_t KEYS_Update(void);
+
+/**
+ * @}
+ */
 
 #endif /* KEYS_H_ */

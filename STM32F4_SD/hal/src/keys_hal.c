@@ -1,8 +1,8 @@
 /**
- * @file: 	keys_hal.c
- * @brief:	   
- * @date: 	6 paź 2014
- * @author: Michal Ksiezopolski
+ * @file    keys_hal.c
+ * @brief   Matrix keyboard low level functions
+ * @date    6 paź 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -18,7 +18,10 @@
 #include <keys_hal.h>
 #include <stm32f4xx.h>
 
-
+/**
+ * @addtogroup KEYS_HAL
+ * @{
+ */
 /*
  * Pin and port mappings for matrix keyboard.
  */
@@ -119,3 +122,6 @@ int8_t KEYS_HAL_ReadRow(void) {
 
   return -1;
 }
+/**
+ * @}
+ */

@@ -1,8 +1,8 @@
 /**
- * @file: 	utils.c
- * @brief:	   
- * @date: 	20 lip 2014
- * @author: Michal Ksiezopolski
+ * @file    utils.c
+ * @brief   Utility and help functions.
+ * @date    20 lip 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -14,7 +14,6 @@
  * http://www.gnu.org/licenses/gpl.html
  * @endverbatim
  */
-
 
 #include <utils.h>
 #include <stdio.h>

@@ -1,8 +1,8 @@
 /**
- * @file: 	timer14.h
- * @brief:	   
- * @date: 	10 paź 2014
- * @author: Michal Ksiezopolski
+ * @file    timer14.h
+ * @brief   TIMER14 control
+ * @date    10 paź 2014
+ * @author Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -18,7 +18,21 @@
 #ifndef TIMER14_H_
 #define TIMER14_H_
 
+/**
+ * @defgroup  TIMER14 TIMER14
+ * @brief     TIMER14 control functions
+ */
+
+/**
+ * @addtogroup TIMER14
+ * @{
+ */
+
 void TIMER14_Init(void);
 uint32_t TIMER14_GetTime(void);
+
+/**
+ * @}
+ */
 
 #endif /* TIMER14_H_ */

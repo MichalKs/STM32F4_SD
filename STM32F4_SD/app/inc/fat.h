@@ -1,8 +1,8 @@
 /**
- * @file:   fat.h
- * @brief:  FAT file system implementation.
- * @date:   4 maj 2014
- * @author: Michal Ksiezopolski
+ * @file    fat.h
+ * @brief   FAT file system implementation.
+ * @date    4 maj 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -18,7 +18,17 @@
 #ifndef FAT_H_
 #define FAT_H_
 
-#include <stm32f4xx.h>
+#include <inttypes.h>
+
+/**
+ * @defgroup  FAT FAT
+ * @brief     FAT filesystem functions.
+ */
+
+/**
+ * @addtogroup FAT
+ * @{
+ */
 
 int8_t FAT_Init(void (*phyInit)(void),
     uint8_t (*phyReadSectors)(uint8_t* buf, uint32_t sector, uint32_t count),
@@ -29,5 +39,9 @@ int FAT_ReadFile(int file, uint8_t* data, int count);
 int FAT_MoveRdPtr(int file, int newWrPtr);
 int FAT_MoveWrPtr(int file, int newWrPtr);
 int FAT_WriteFile(int file, const uint8_t* data, int count);
+
+/**
+ * @}
+ */
 
 #endif /* FAT_H_ */

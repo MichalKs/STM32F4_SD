@@ -1,8 +1,8 @@
 /**
- * @file: 	comm.h
- * @brief:	   
- * @date: 	25 sie 2014
- * @author: Michal Ksiezopolski
+ * @file    comm.h
+ * @brief   Communication with PC functions.
+ * @date    25 sie 2014
+ * @author  Michal Ksiezopolski
  * 
  * @verbatim
  * Copyright (c) 2014 Michal Ksiezopolski.
@@ -20,9 +20,23 @@
 
 #include <inttypes.h>
 
+/**
+ * @defgroup  COMM COMM
+ * @brief     Communication with PC functions.
+ */
+
+/**
+ * @addtogroup COMM
+ * @{
+ */
+
 void    COMM_Init(uint32_t baud);
 void    COMM_Putc(uint8_t c);
 uint8_t COMM_Getc(void);
 uint8_t COMM_GetFrame(uint8_t* buf, uint8_t* len);
+
+/**
+ * @}
+ */
 
 #endif /* COMM_H_ */

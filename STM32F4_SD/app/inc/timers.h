@@ -1,8 +1,8 @@
 /**
- * @file:   timers.h
- * @brief:  Timing control functions.
- * @date:   9 kwi 2014
- * @author: Michal Ksiezopolski
+ * @file    timers.h
+ * @brief   Timing control functions.
+ * @date    9 kwi 2014
+ * @author  Michal Ksiezopolski
  * 
  * Control of the SysTick and software timers
  * incremented based on SysTick interrupts.
@@ -41,6 +41,7 @@ int8_t    TIMER_AddSoftTimer      (uint32_t maxVal, void (*fun)(void));
 void      TIMER_StartSoftTimer    (uint8_t id);
 void      TIMER_SoftTimersUpdate  (void);
 uint32_t  TIMER_GetTime           (void);
+
 /**
  * @}
  */
